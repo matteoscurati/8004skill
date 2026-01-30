@@ -1,0 +1,28 @@
+{
+  "name": "8004skill",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI agent skill for ERC-8004 agent economy interactions",
+  "license": "GPL-3.0",
+  "author": "Matteo Scurati",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/matteoscurati/8004skill.git"
+  },
+  "homepage": "https://github.com/matteoscurati/8004skill",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "agent0-sdk": "^1.4.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.6"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
