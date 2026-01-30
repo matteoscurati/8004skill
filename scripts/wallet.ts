@@ -20,6 +20,8 @@ import {
   parseChainId,
   validateAgentId,
   validateAddress,
+  buildSdkConfig,
+  getOverridesFromEnv,
   exitWithError,
   handleError,
 } from './lib/shared.js';
@@ -34,7 +36,7 @@ async function main() {
   const privateKey = process.env.PRIVATE_KEY;
 
   if (action === 'get') {
-    const sdk = new SDK({ chainId, rpcUrl });
+    const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
     const agent = await sdk.loadAgent(agentId);
     const wallet = await agent.getWallet();
     console.log(
@@ -55,7 +57,7 @@ async function main() {
     exitWithError('PRIVATE_KEY environment variable is required for set/unset');
   }
 
-  const sdk = new SDK({ chainId, rpcUrl, privateKey });
+  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, privateKey, ...getOverridesFromEnv(chainId) }));
   const agent = await sdk.loadAgent(agentId);
 
   if (action === 'set') {

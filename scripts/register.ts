@@ -15,6 +15,7 @@ import {
   requireArg,
   parseChainId,
   buildSdkConfig,
+  getOverridesFromEnv,
   exitWithError,
   handleError,
 } from './lib/shared.js';
@@ -50,6 +51,7 @@ async function main() {
       pinataJwt,
       filecoinPrivateKey,
       ipfsNodeUrl,
+      ...getOverridesFromEnv(chainId),
     }),
   );
 

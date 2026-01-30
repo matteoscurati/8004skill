@@ -59,16 +59,21 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 1. **Read existing config** from `~/.8004skill/config.json` (if it exists). Show current settings.
 
 2. **Ask which chain** to use. Show supported chains from `{baseDir}/reference/chains.md`:
-   - Ethereum Mainnet (1)
-   - Ethereum Sepolia (11155111) - recommended for testing
-   - Base Sepolia (84532)
-   - Linea Sepolia (59141)
-   - Polygon Amoy (80002)
-   - Hedera Testnet (296)
-   - HyperEVM Testnet (998)
-   - SKALE Sepolia (1351057110)
+   - Ethereum Mainnet (1) — full SDK support
+   - Ethereum Sepolia (11155111) — full SDK support, recommended for testing
+   - Base Sepolia (84532) — requires env var overrides
+   - Linea Sepolia (59141) — requires env var overrides
+   - Polygon Amoy (80002) — requires env var overrides
+   - Hedera Testnet (296) — requires env var overrides
+   - HyperEVM Testnet (998) — requires env var overrides
+   - SKALE Sepolia (1351057110) — requires env var overrides
 
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md` for the chosen chain.
+
+   **If the selected chain is NOT Mainnet (1) or Sepolia (11155111)**: Warn the user that the SDK does not have built-in contract addresses or subgraph URLs for this chain. They must set the following environment variables for operations to work:
+   - `REGISTRY_ADDRESS_IDENTITY` — Identity registry contract address
+   - `REGISTRY_ADDRESS_REPUTATION` — Reputation registry contract address
+   - `SUBGRAPH_URL` — Subgraph endpoint for the chain
 
 4. **Ask about IPFS provider** (optional, needed for registration/updates):
    - `pinata` - needs `PINATA_JWT` env var
@@ -578,6 +583,10 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/update-agent.ts \
 | `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning service |
 | `IPFS_NODE_URL` | IPFS via local node | URL of the IPFS node API |
 | `WALLET_PRIVATE_KEY` | Wallet set | Private key of the wallet being set (for EIP-712 signature) |
+| `SEARCH_API_URL` | Semantic search (optional) | Override URL for the semantic search API |
+| `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
+| `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
+| `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
 
 ---
 

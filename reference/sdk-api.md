@@ -143,18 +143,18 @@ enum TrustModel { REPUTATION = 'reputation', CRYPTO_ECONOMIC = 'crypto-economic'
 
 ## Semantic Search Service
 
-Direct API call (no SDK needed):
+Direct API call (no SDK needed). Override URL via `SEARCH_API_URL` env var.
 
 ```
-POST https://search.ag0.xyz/api/v1/search
+POST https://agent0-semantic-search.dawid-pisarczyk.workers.dev/api/v1/search
 Content-Type: application/json
 
 {
   "query": "natural language description",
-  "topK": 10,
+  "limit": 10,
   "filters": {
-    "chainId": { "equals": 11155111 },
-    "mcp": { "equals": true }
+    "in": { "chainId": [11155111] },
+    "exists": ["mcpEndpoint"]
   }
 }
 ```

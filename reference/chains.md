@@ -8,15 +8,15 @@
 
 ## Testnets
 
-| Chain | Chain ID | Identity Registry | Reputation Registry | Validation Registry |
-|-------|----------|-------------------|---------------------|---------------------|
-| Ethereum Sepolia | 11155111 | `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0x8004B663056A597Dffe9eCcC1965A193B7388713` | `0x8004Cb1BF31DAf7788923b405b754f57acEB4272` |
-| Base Sepolia | 84532 | deployed (check subgraph) | deployed | - |
-| Linea Sepolia | 59141 | deployed (check subgraph) | deployed | - |
-| Polygon Amoy | 80002 | deployed (check subgraph) | deployed | - |
-| Hedera Testnet | 296 | deployed (check subgraph) | deployed | - |
-| HyperEVM Testnet | 998 | deployed (check subgraph) | deployed | - |
-| SKALE Sepolia | 1351057110 | deployed (check subgraph) | deployed | - |
+| Chain | Chain ID | Identity Registry | Reputation Registry | Validation Registry | SDK Support |
+|-------|----------|-------------------|---------------------|---------------------|-------------|
+| Ethereum Sepolia | 11155111 | `0x8004A818BFB912233c491871b3d84c89A494BD9e` | `0x8004B663056A597Dffe9eCcC1965A193B7388713` | `0x8004Cb1BF31DAf7788923b405b754f57acEB4272` | Built-in |
+| Base Sepolia | 84532 | Requires overrides | Requires overrides | - | Via env vars |
+| Linea Sepolia | 59141 | Requires overrides | Requires overrides | - | Via env vars |
+| Polygon Amoy | 80002 | Requires overrides | Requires overrides | - | Via env vars |
+| Hedera Testnet | 296 | Requires overrides | Requires overrides | - | Via env vars |
+| HyperEVM Testnet | 998 | Requires overrides | Requires overrides | - | Via env vars |
+| SKALE Sepolia | 1351057110 | Requires overrides | Requires overrides | - | Via env vars |
 
 ## Default Subgraph URLs
 
@@ -36,5 +36,7 @@ Set `GRAPH_API_KEY` env var or use the SDK's `subgraphOverrides` config.
 ## Notes
 
 - All contract addresses start with `0x8004` (deployed via CREATE2 with vanity prefix)
-- The SDK has built-in defaults for Mainnet and Sepolia. Other chains require `registryOverrides` in SDK config.
-- Subgraph indexes all chains listed above. For chains without default subgraph URLs, use `subgraphOverrides`.
+- The SDK has built-in defaults for Mainnet (1) and Sepolia (11155111) only. All other chains require environment variable overrides:
+  - `REGISTRY_ADDRESS_IDENTITY` — Identity registry contract address for the active chain
+  - `REGISTRY_ADDRESS_REPUTATION` — Reputation registry contract address for the active chain
+  - `SUBGRAPH_URL` — Subgraph endpoint for the active chain

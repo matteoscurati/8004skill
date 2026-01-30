@@ -66,9 +66,13 @@ export function buildSdkConfig(opts: {
   pinataJwt?: string;
   filecoinPrivateKey?: string;
   ipfsNodeUrl?: string;
+  subgraphUrl?: string;
+  registryOverrides?: Record<number, Record<string, string>>;
 }): SDKConfig {
   const config: SDKConfig = { chainId: opts.chainId, rpcUrl: opts.rpcUrl };
   if (opts.privateKey) config.privateKey = opts.privateKey;
+  if (opts.subgraphUrl) config.subgraphUrl = opts.subgraphUrl;
+  if (opts.registryOverrides) config.registryOverrides = opts.registryOverrides;
 
   if (opts.ipfsProvider) {
     const provider = validateIpfsProvider(opts.ipfsProvider);
@@ -90,6 +94,29 @@ export function buildSdkConfig(opts: {
   }
 
   return config;
+}
+
+// ── Environment overrides for non-default chains ────────────────────
+
+export function getOverridesFromEnv(chainId: number): {
+  subgraphUrl?: string;
+  registryOverrides?: Record<number, Record<string, string>>;
+} {
+  const result: ReturnType<typeof getOverridesFromEnv> = {};
+
+  const subgraphUrl = process.env.SUBGRAPH_URL;
+  if (subgraphUrl) result.subgraphUrl = subgraphUrl;
+
+  const identity = process.env.REGISTRY_ADDRESS_IDENTITY;
+  const reputation = process.env.REGISTRY_ADDRESS_REPUTATION;
+  if (identity || reputation) {
+    const reg: Record<string, string> = {};
+    if (identity) reg.IDENTITY = identity;
+    if (reputation) reg.REPUTATION = reputation;
+    result.registryOverrides = { [chainId]: reg };
+  }
+
+  return result;
 }
 
 // ── Error handling ──────────────────────────────────────────────────

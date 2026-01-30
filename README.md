@@ -112,23 +112,27 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 | `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning |
 | `IPFS_NODE_URL` | IPFS via local node | URL of the IPFS node API |
 | `WALLET_PRIVATE_KEY` | Wallet set | Private key of the wallet being set (EIP-712) |
+| `SEARCH_API_URL` | Semantic search (optional) | Override URL for the semantic search API |
+| `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
+| `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
+| `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
 
-Read operations (search, load agent, check reputation) do not require any environment variables.
+Read operations (search, load agent, check reputation) do not require `PRIVATE_KEY`. Chains other than Mainnet (1) and Sepolia (11155111) require `SUBGRAPH_URL` and registry address overrides.
 
 ## Supported Chains
 
-| Chain | Chain ID | Status |
-|-------|----------|--------|
-| Ethereum Mainnet | 1 | Production |
-| Ethereum Sepolia | 11155111 | Testnet |
-| Base Sepolia | 84532 | Testnet |
-| Linea Sepolia | 59141 | Testnet |
-| Polygon Amoy | 80002 | Testnet |
-| Hedera Testnet | 296 | Testnet |
-| HyperEVM Testnet | 998 | Testnet |
-| SKALE Sepolia | 1351057110 | Testnet |
+| Chain | Chain ID | Status | Support |
+|-------|----------|--------|---------|
+| Ethereum Mainnet | 1 | Production | Full |
+| Ethereum Sepolia | 11155111 | Testnet | Full |
+| Base Sepolia | 84532 | Testnet | Requires overrides |
+| Linea Sepolia | 59141 | Testnet | Requires overrides |
+| Polygon Amoy | 80002 | Testnet | Requires overrides |
+| Hedera Testnet | 296 | Testnet | Requires overrides |
+| HyperEVM Testnet | 998 | Testnet | Requires overrides |
+| SKALE Sepolia | 1351057110 | Testnet | Requires overrides |
 
-For contract addresses and RPC endpoints, see `reference/chains.md` inside the project.
+"Full" support means the SDK has built-in contract addresses and subgraph URLs. "Requires overrides" means you must set `SUBGRAPH_URL`, `REGISTRY_ADDRESS_IDENTITY`, and `REGISTRY_ADDRESS_REPUTATION` environment variables. For contract addresses and RPC endpoints, see `reference/chains.md` inside the project.
 
 ## Manual Installation
 

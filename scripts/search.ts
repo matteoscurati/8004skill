@@ -12,21 +12,27 @@ import type { SearchParams, SearchOptions } from 'agent0-sdk';
 import {
   parseArgs,
   parseChainId,
+  buildSdkConfig,
+  getOverridesFromEnv,
   exitWithError,
   handleError,
 } from './lib/shared.js';
 
-const DEFAULT_SEARCH_URL = 'https://search.ag0.xyz/api/v1/search';
+const DEFAULT_SEARCH_URL = 'https://agent0-semantic-search.dawid-pisarczyk.workers.dev/api/v1/search';
 const FETCH_TIMEOUT_MS = 30_000;
 
 async function semanticSearch(
   query: string,
   options: { chainId?: number; mcpOnly?: boolean; a2aOnly?: boolean; limit?: number },
 ) {
-  const filters: Record<string, { equals: unknown }> = {};
-  if (options.chainId) filters.chainId = { equals: options.chainId };
-  if (options.mcpOnly) filters.mcp = { equals: true };
-  if (options.a2aOnly) filters.a2a = { equals: true };
+  const filters: { in?: Record<string, unknown[]>; exists?: string[] } = {};
+  if (options.chainId) {
+    filters.in = { chainId: [options.chainId] };
+  }
+  const existsFields: string[] = [];
+  if (options.mcpOnly) existsFields.push('mcpEndpoint');
+  if (options.a2aOnly) existsFields.push('a2aEndpoint');
+  if (existsFields.length > 0) filters.exists = existsFields;
 
   const searchUrl = process.env.SEARCH_API_URL || DEFAULT_SEARCH_URL;
   const controller = new AbortController();
@@ -39,7 +45,7 @@ async function semanticSearch(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query,
-        topK: options.limit || 10,
+        limit: options.limit || 10,
         filters: Object.keys(filters).length > 0 ? filters : undefined,
       }),
       signal: controller.signal,
@@ -67,7 +73,7 @@ async function subgraphSearch(args: Record<string, string>) {
     exitWithError('--rpc-url is required for subgraph search. Use --query for semantic search without RPC.');
   }
 
-  const sdk = new SDK({ chainId, rpcUrl });
+  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
   const filters: SearchParams = {};
 
   if (args['name']) filters.name = args['name'];

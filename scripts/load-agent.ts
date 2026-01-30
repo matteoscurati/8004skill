@@ -12,6 +12,8 @@ import {
   requireArg,
   parseChainId,
   validateAgentId,
+  buildSdkConfig,
+  getOverridesFromEnv,
   handleError,
 } from './lib/shared.js';
 
@@ -22,7 +24,7 @@ async function main() {
   const chainId = parseChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
 
-  const sdk = new SDK({ chainId, rpcUrl });
+  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
   const agent = await sdk.loadAgent(agentId);
   const regFile = agent.getRegistrationFile();
 

@@ -14,6 +14,7 @@ import {
   parseChainId,
   validateAgentId,
   buildSdkConfig,
+  getOverridesFromEnv,
   exitWithError,
   handleError,
 } from './lib/shared.js';
@@ -63,6 +64,7 @@ async function main() {
       pinataJwt,
       filecoinPrivateKey,
       ipfsNodeUrl,
+      ...getOverridesFromEnv(chainId),
     }),
   );
 
