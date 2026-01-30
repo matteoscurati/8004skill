@@ -38,10 +38,12 @@ Any of these (or similar phrasing) will start the corresponding wizard flow. If 
 ```bash
 git clone https://github.com/matteoscurati/8004skill.git
 cd 8004skill
-npm install
+./install.sh
 ```
 
-SKILL.md-compatible agents detect the skill automatically via `SKILL.md` in the project root. No further setup is needed -- just open your agent in the `8004skill` directory and start asking.
+The install wizard checks prerequisites, installs npm dependencies, and symlinks the skill into the agent(s) of your choice (`~/.claude/skills/` and/or `~/.openclaw/skills/`). After that, every SKILL.md-compatible agent on your machine will discover the skill automatically.
+
+You can also install manually — see [Manual installation](#manual-installation) below.
 
 ## Quick Start
 
@@ -49,15 +51,11 @@ Here is the fastest path from install to your first operation:
 
 ### 1. Install
 
-```bash
-git clone https://github.com/matteoscurati/8004skill.git
-cd 8004skill
-npm install
-```
+Follow the [Installation](#installation) steps above.
 
 ### 2. Configure
 
-Open your agent in the project directory and say:
+Open your agent in any directory and say:
 
 > "Configure 8004 for Sepolia"
 
@@ -131,6 +129,24 @@ Read operations (search, load agent, check reputation) do not require any enviro
 | SKALE Sepolia | 1351057110 | Testnet |
 
 For contract addresses and RPC endpoints, see `reference/chains.md` inside the project.
+
+## Manual Installation
+
+If you prefer not to use the wizard, clone the repo, install dependencies, and symlink into the agent directory yourself:
+
+```bash
+git clone https://github.com/matteoscurati/8004skill.git
+cd 8004skill
+npm install
+
+# Claude Code
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)" ~/.claude/skills/8004skill
+
+# OpenClaw
+mkdir -p ~/.openclaw/skills
+ln -s "$(pwd)" ~/.openclaw/skills/8004skill
+```
 
 ## Security
 
