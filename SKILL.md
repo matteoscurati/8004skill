@@ -28,7 +28,7 @@ Before executing any operation, verify the project is ready:
 
 1. Check `{baseDir}/node_modules` exists. If missing, run `npm install --prefix {baseDir}`.
 2. Ensure config directory exists: `mkdir -p ~/.8004skill && chmod 700 ~/.8004skill`
-3. If `~/.8004skill/config.json` does not exist, trigger **Configure** (Operation 1) before proceeding.
+3. If `~/.8004skill/config.json` does not exist **and** the user requests a **write** operation, trigger **Configure** (Operation 1) before proceeding. Read-only operations work without config (see read-only defaults below).
 
 ---
 
@@ -46,6 +46,7 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 | 6 | Inspect Agent (Reputation + Connect) | Read | No |
 | 7 | Wallet Management | Read/Write | Set/Unset only |
 | 8 | Verify Identity | Read/Write | Sign only |
+| 9 | Whoami | Read | No (Sign optional) |
 
 ### Common Patterns
 
@@ -55,7 +56,25 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 3. Explicit `--chain-id` (no default fallback for writes)
 4. User confirmation before submitting the transaction
 
+**Read-only defaults** — read operations work without config. Default: chain `11155111`, RPC `https://rpc.sepolia.org`. If the agent ID contains a chain prefix (e.g., `1:42`), derive chain ID from it and look up the RPC from `{baseDir}/reference/chains.md`.
+
 **Chain ID / RPC URL resolution** — unless stated otherwise, derive chain ID from the agent ID prefix or config, and RPC URL from config (ask if missing).
+
+### Trust Labels
+
+Derive a trust label from reputation `count` and `averageValue`:
+
+| Label | Condition | Emoji |
+|-------|-----------|-------|
+| No Data | count = 0 | ⚪ |
+| Emerging | count < 5 | 🔵 |
+| Established | count >= 5, avg >= 50 | 🟢 |
+| Trusted | count >= 10, avg >= 70 | 🟢 |
+| Highly Trusted | count >= 20, avg >= 80 | ⭐ |
+| Caution | avg < 0 | 🟠 |
+| Untrusted | count >= 5, avg < -50 | 🔴 |
+
+Format: "{emoji} {label} — {averageValue}/100 ({count} reviews)"
 
 ---
 
@@ -151,7 +170,7 @@ Show: agentId (`{chainId}:{tokenId}`), txHash (link to block explorer), metadata
 **Triggered by**: "load agent", "show agent", "get agent details", "agent info".
 
 ### Input
-**Agent ID** (required, format `chainId:tokenId`). Resolve chain ID and RPC URL per common pattern.
+**Agent ID** (required, format `chainId:tokenId`). Resolve chain ID and RPC URL per common pattern. Read-only defaults apply.
 
 ### Execution
 
@@ -172,7 +191,7 @@ Show: name, agentId, description, active status, endpoints (MCP, A2A, ENS), MCP 
 
 **Triggered by**: "search agents", "find agents", "discover agents", "agents that do X".
 
-Config is optional (semantic search works without RPC; subgraph search requires it).
+Read-only defaults apply. Semantic search works without RPC; subgraph search requires it.
 
 ### Input
 
@@ -256,7 +275,7 @@ Result: txHash and confirmation that feedback was revoked.
 **Triggered by**: "check reputation", "view reputation", "connect to agent", "inspect agent", "how good is agent X".
 
 ### Input
-**Agent ID** (required). Resolve chain ID and RPC URL per common pattern.
+**Agent ID** (required). Resolve chain ID and RPC URL per common pattern. Read-only defaults apply.
 
 ### Execution
 
@@ -271,7 +290,7 @@ npx tsx {baseDir}/scripts/reputation.ts --agent-id <agentId> --chain-id <chainId
 
 ### Result
 
-Show: agent name/ID, active status, rating (average/100 with review count), recent feedback table (Reviewer, Rating, Tags, Text).
+Show: agent name/ID, active status, trust label with rating (e.g., "🟢 Trusted — 82/100 (15 reviews)"), recent feedback table (Reviewer, Rating, Tags, Text).
 
 If MCP endpoint exists, show endpoint URL, tools list, and MCP config snippet (`{"mcpServers":{"<name>":{"url":"<endpoint>"}}}`). If A2A endpoint exists, show agent card URL and skills.
 
@@ -286,7 +305,7 @@ If MCP endpoint exists, show endpoint URL, tools list, and MCP config snippet (`
 **Triggered by**: "set wallet", "get wallet", "unset wallet", "agent wallet", "manage wallet".
 
 ### Prerequisites
-1. Load config.
+1. Load config. For `get`: read-only defaults apply.
 2. For `set`/`unset`: standard write prerequisites apply (see above).
 3. For `set`, wallet signature flow:
    - **One-wallet flow**: wallet = signer → no `WALLET_PRIVATE_KEY` needed
@@ -337,7 +356,7 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/wallet.ts \
 Uses the ERC-8004 identity verification pattern: look up the agent's on-chain wallet, sign or verify a message against it.
 
 ### Prerequisites
-- **Sign**: write prerequisites apply. **Verify**: read-only (no private key needed).
+- **Sign**: write prerequisites apply. **Verify**: read-only; read-only defaults apply.
 - Resolve chain ID and RPC URL per common pattern.
 
 ### Sign (prove own identity)
@@ -365,13 +384,53 @@ npx tsx {baseDir}/scripts/verify.ts \
   --signature <signature> --message "<message>"
 ```
 
-**Result**: Show verified (true/false), agent, on-chain wallet, active status, reputation summary, warnings. If `verified: false`, explain the signature doesn't match the registered wallet — not necessarily fraud, but identity cannot be confirmed.
+**Result**: Show verified (true/false), agent, on-chain wallet, active status, reputation summary with trust label (e.g., "🟢 Trusted — 82/100 (15 reviews)"), warnings. If `verified: false`, explain the signature doesn't match the registered wallet — not necessarily fraud, but identity cannot be confirmed.
 
 ### Error Handling
 - **No wallet set**: Suggest using Operation 7 to set one first.
 - **Agent not found**: Check agent ID and chain.
 - **Invalid signature format**: Must be 0x-prefixed hex.
 - Verification failure is a normal result, not an error.
+
+---
+
+## Operation 9: Whoami
+
+**Triggered by**: "whoami", "my agents", "who am I", "my identity", "my agent status".
+
+Shows agent identity, reputation, and wallet in one view. Read-only defaults apply.
+
+### Input
+
+Resolve agent ID from one of:
+1. Config `registrations` (if config exists, show registered agents and let user pick)
+2. User provides agent ID directly
+3. User provides wallet address — search for agents owned by that address
+
+### Execution
+
+Run sequentially:
+1. `load-agent.ts` — identity (name, description, active, owners, endpoints)
+2. `reputation.ts` — trust metrics (count, averageValue, recent feedback)
+3. `wallet.ts --action get` — on-chain wallet address
+
+If `PRIVATE_KEY` or keystore is available, optionally also run:
+4. `verify.ts --action sign` — prove control (signature + walletMatch)
+
+### Result
+
+Present as a single card:
+- **Agent**: {name} ({agentId})
+- **Status**: {active ? "Active" : "Inactive"}
+- **Trust**: {trustLabel} — {averageValue}/100 ({count} reviews)
+- **Wallet**: {address || "not set"}
+- **Owners**: {owners}
+- **Endpoints**: MCP {yes/no}, A2A {yes/no}
+- **Identity Proof**: {if signed: "Verified ✓ (wallet match: {walletMatch})" else "Not signed (set PRIVATE_KEY to prove ownership)"}
+
+### Error Handling
+- Agent not found: Check agent ID and chain.
+- If no registrations in config and no agent ID provided, ask the user for an agent ID or wallet address.
 
 ---
 
