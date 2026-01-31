@@ -47,6 +47,7 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 | 5 | Give Feedback | Write | Yes |
 | 6 | Inspect Agent (Reputation + Connect) | Read | No |
 | 7 | Wallet Management | Read/Write | Set/Unset only |
+| 8 | Verify Identity | Read/Write | Sign only |
 
 ---
 
@@ -91,18 +92,25 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
    }
    ```
 
-6. **Run preflight check** to verify environment:
+6. **Ask about encrypted keystore** (optional, recommended for better private key security):
+   - Explain: "You can store your private key in an AES-256-GCM encrypted keystore instead of passing it via environment variable each time. This avoids shell history exposure and process listing visibility."
+   - If interested, instruct the user to run interactively: `npx tsx {baseDir}/scripts/keystore.ts --action import`
+   - This prompts for the key and password interactively (with hidden input) and saves to `~/.8004skill/keystore.json`
+   - After import, write operations only need `KEYSTORE_PASSWORD` instead of `PRIVATE_KEY`
+
+7. **Run preflight check** to verify environment:
    ```
    npx tsx {baseDir}/scripts/check-env.ts
    ```
    Show the user:
-   - Signer address (if PRIVATE_KEY is set)
+   - Signer address (if PRIVATE_KEY is set or keystore is configured)
+   - Keystore status (exists, entry count, stored addresses)
    - Which env vars are configured
    - Any warnings (e.g., PRIVATE_KEY set but invalid)
 
 ### Error Handling
 - If config directory can't be created, warn and continue (config can be in-memory for the session).
-- If PRIVATE_KEY is not set, inform the user they'll need it for write operations (register, feedback, update, wallet set/unset).
+- If neither PRIVATE_KEY nor keystore is configured, inform the user they'll need one for write operations (register, feedback, update, wallet set/unset). Suggest the encrypted keystore as the preferred approach.
 
 ---
 
@@ -142,7 +150,7 @@ Ask: "Proceed with registration?"
 
 ### Execution
 
-Build and run the command internally (never show the raw command to the user):
+Build and run the command internally (never show the raw command to the user). Use `PRIVATE_KEY` if set, otherwise use `KEYSTORE_PASSWORD` for keystore decryption:
 
 ```
 PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/register.ts \
@@ -517,6 +525,89 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/wallet.ts \
 
 ---
 
+## Operation 8: Verify Identity
+
+**Triggered by**: "verify agent", "prove identity", "sign challenge", "is this agent real", "check agent identity", "verify signature".
+
+This operation uses the ERC-8004 identity verification pattern: look up the agent's on-chain wallet, sign or verify a message against it, and establish trust.
+
+### Prerequisites
+1. Load config from `~/.8004skill/config.json`. If missing, ask for chain-id and rpc-url directly.
+2. For **Sign**: run preflight check, verify `PRIVATE_KEY` is set.
+3. For **Verify**: no private key needed (read-only).
+
+### Sub-actions
+
+#### Sign (prove own identity)
+
+**Input Gathering:**
+1. **Agent ID** (required) - the agent whose identity to prove
+2. **Message** (optional) - custom message to sign. If not provided, a structured challenge is auto-generated with format: `erc8004:verify:{agentId}:{nonce}:{timestamp}`
+
+**Confirmation:**
+Show summary before signing:
+- Agent: {agentId}
+- Signer address: {signerAddress}
+- On-chain wallet: {onChainWallet}
+- Wallet match: {yes/no}
+- Message to sign: {message}
+
+Ask: "Sign this message to prove identity?"
+
+**Execution:**
+```
+PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/verify.ts \
+  --action sign \
+  --agent-id <agentId> \
+  --chain-id <chainId> \
+  --rpc-url <rpcUrl> \
+  [--message "<message>"]
+```
+
+**Result Presentation:**
+- Signature: {signature}
+- Signer: {signerAddress}
+- Wallet match: {walletMatch} — if false, warn that the signer is not the agent's registered wallet
+- Message: {message}
+
+#### Verify (check another agent's identity)
+
+**Input Gathering:**
+1. **Agent ID** (required) - the agent claiming the identity
+2. **Signature** (required) - the 0x-prefixed hex signature to verify
+3. **Message** (required) - the message that was signed
+
+**Execution:**
+```
+npx tsx {baseDir}/scripts/verify.ts \
+  --action verify \
+  --agent-id <agentId> \
+  --chain-id <chainId> \
+  --rpc-url <rpcUrl> \
+  --signature <signature> \
+  --message "<message>"
+```
+
+**Result Presentation:**
+
+Present a clear trust assessment:
+- **Verified**: {true/false} — whether the signature matches the agent's on-chain wallet
+- **Agent**: {agentId}
+- **On-chain wallet**: {onChainWallet}
+- **Active**: {active status}
+- **Reputation**: {count} reviews, average {averageValue}/100 (if available)
+- **Warnings**: list any warnings (expired timestamp, agent ID mismatch, inactive agent, reputation unavailable)
+
+If `verified: false`, explain that the signature does not match the agent's registered wallet — this does not necessarily mean fraud, but the identity claim cannot be confirmed.
+
+### Error Handling
+- **No wallet set**: The agent has no wallet registered on-chain. Suggest using Operation 7 to set one first.
+- **Agent not found**: Check the agent ID and chain.
+- **Invalid signature format**: Must be a 0x-prefixed hex string.
+- Verification failure (`verified: false`) is a normal result, not an error.
+
+---
+
 ## Update Agent (sub-flow)
 
 **Triggered by**: "update agent", "edit agent", "change agent name", "add MCP endpoint to my agent".
@@ -562,15 +653,16 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/update-agent.ts \
 
 ## Security Rules
 
-- **NEVER** store private keys on disk. Always use env vars.
+- **NEVER** store private keys on disk in plaintext. Use the encrypted keystore or env vars.
 - **NEVER** log private keys or include them in outputs.
 - **ALWAYS** run the preflight check (`check-env.ts`) before write operations to confirm the signer address with the user.
 - **ALWAYS** show transaction details and estimated gas before submitting.
 - **ALWAYS** ask for explicit user confirmation before any on-chain write.
-- Private keys must be passed via `PRIVATE_KEY` environment variable.
+- Private keys can be provided via `PRIVATE_KEY` environment variable or the encrypted keystore (`~/.8004skill/keystore.json`). The keystore is the preferred method as it avoids shell history exposure.
 - Wallet private keys must be passed via `WALLET_PRIVATE_KEY` environment variable.
-- All config files use chmod 600 permissions.
+- All config and keystore files use chmod 600 permissions (directory: chmod 700).
 - **NEVER** show raw CLI commands to the user. Build and execute them internally.
+- When using the keystore, pass `KEYSTORE_PASSWORD` as an env var: `KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" npx tsx ...`
 
 ---
 
@@ -578,7 +670,9 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/update-agent.ts \
 
 | Variable | Required For | Description |
 |----------|-------------|-------------|
-| `PRIVATE_KEY` | Register, Update, Feedback, Wallet set/unset | Hex-encoded private key (0x-prefixed) of the agent owner |
+| `PRIVATE_KEY` | Register, Update, Feedback, Wallet set/unset | Hex-encoded private key (0x-prefixed) of the agent owner. Not needed if using encrypted keystore. |
+| `KEYSTORE_PASSWORD` | Write ops (when using keystore) | Password to decrypt the encrypted keystore. Required when `PRIVATE_KEY` is not set and keystore exists. |
+| `KEYSTORE_LABEL` | Write ops (when using keystore, optional) | Which keystore entry to use (default: `"default"`). |
 | `PINATA_JWT` | IPFS via Pinata | JWT token for Pinata IPFS pinning |
 | `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning service |
 | `IPFS_NODE_URL` | IPFS via local node | URL of the IPFS node API |
@@ -605,6 +699,9 @@ The user can ask at any time. Example prompts:
 - "What agents are available on mainnet?"
 - "Show me my agent's details"
 - "Update my agent's description"
+- "Prove my agent's identity"
+- "Verify this agent's signature"
+- "Is agent 11155111:42 real?"
 
 Any of these (or similar phrasing) will trigger the corresponding wizard flow above. If in doubt, show the Operations Menu.
 
