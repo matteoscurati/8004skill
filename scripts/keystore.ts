@@ -109,6 +109,16 @@ async function actionImport(label: string): Promise<void> {
     exitWithError('Password must be at least 12 characters.');
   }
 
+  const uniqueChars = new Set(password).size;
+  const charClasses = [/[A-Z]/, /[a-z]/, /\d/, /[^A-Za-z0-9]/].filter((re) => re.test(password)).length;
+
+  if (uniqueChars <= 4 || charClasses < 2) {
+    stderr.write(
+      'WARNING: Weak password detected. For better security, use a mix of uppercase, ' +
+        'lowercase, digits, and symbols with more character variety.\n',
+    );
+  }
+
   const confirm = await readHidden('Confirm encryption password: ');
   if (password !== confirm) {
     exitWithError('Passwords do not match.');

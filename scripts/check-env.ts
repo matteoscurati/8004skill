@@ -7,8 +7,11 @@
  *   npx tsx check-env.ts
  */
 
+import { existsSync, realpathSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { privateKeyToAddress } from 'viem/accounts';
-import { handleError } from './lib/shared.js';
+import { handleError, SCRIPT_VERSION } from './lib/shared.js';
 import {
   keystoreExists,
   loadKeystoreFile,
@@ -49,6 +52,52 @@ function resolveSignerFromKeystore(ksFile: KeystoreFile): SignerResult {
   }
 }
 
+// ── Security warnings ──────────────────────────────────────────────
+
+function detectOpenClaw(): string | null {
+  const openclawDir = join(homedir(), '.openclaw');
+  const hasDir = existsSync(openclawDir);
+  const hasEnv = !!process.env.OPENCLAW_HOME || !!process.env.OPENCLAW_SESSION;
+  if (hasDir || hasEnv) {
+    return (
+      'OpenClaw environment detected. Session logs may capture KEYSTORE_PASSWORD in plaintext. ' +
+      'Consider using PRIVATE_KEY env var (set outside the session) instead of the keystore ' +
+      'when running inside OpenClaw, or ensure session logging is disabled for sensitive operations.'
+    );
+  }
+  return null;
+}
+
+function detectCloudSync(): string | null {
+  const keystorePath = getKeystorePath();
+  if (!existsSync(keystorePath)) return null;
+
+  let resolvedPath: string;
+  try {
+    resolvedPath = realpathSync(keystorePath);
+  } catch {
+    return null;
+  }
+
+  const home = homedir();
+  const cloudPrefixes = [
+    join(home, 'Library', 'Mobile Documents'),  // iCloud
+    join(home, 'Library', 'CloudStorage'),       // iCloud alt
+    join(home, 'Dropbox'),
+    join(home, 'Google Drive'),
+    join(home, 'OneDrive'),
+  ];
+
+  const isCloudSynced = cloudPrefixes.some((prefix) => resolvedPath.startsWith(prefix));
+  if (!isCloudSynced) return null;
+
+  return (
+    `Keystore path (${resolvedPath}) appears to be inside a cloud-synced directory. ` +
+    'The encrypted keystore may be replicated to cloud storage. ' +
+    'Consider moving ~/.8004skill outside of synced directories.'
+  );
+}
+
 function main(): void {
   const privateKey = process.env.PRIVATE_KEY;
   let signer: SignerResult = privateKey ? deriveAddress(privateKey) : NO_SIGNER;
@@ -70,7 +119,12 @@ function main(): void {
     }
   }
 
+  const warnings = [detectOpenClaw(), detectCloudSync()].filter(
+    (w): w is string => w !== null,
+  );
+
   console.log(JSON.stringify({
+    version: SCRIPT_VERSION,
     signerAddress: signer.signerAddress,
     privateKeyError: signer.privateKeyError,
     keystore: {
@@ -92,6 +146,7 @@ function main(): void {
       REGISTRY_ADDRESS_IDENTITY: !!process.env.REGISTRY_ADDRESS_IDENTITY,
       REGISTRY_ADDRESS_REPUTATION: !!process.env.REGISTRY_ADDRESS_REPUTATION,
     },
+    ...(warnings.length > 0 && { warnings }),
   }, null, 2));
 }
 

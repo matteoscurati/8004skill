@@ -18,6 +18,7 @@ import {
   exitWithError,
   loadPrivateKey,
   handleError,
+  initSecurityHardening,
 } from './lib/shared.js';
 
 const MUTATION_FLAGS = [
@@ -32,6 +33,7 @@ const MUTATION_FLAGS = [
 ] as const;
 
 async function main() {
+  initSecurityHardening();
   const args = parseArgs();
   const privateKey = loadPrivateKey();
 

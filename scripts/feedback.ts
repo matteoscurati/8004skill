@@ -20,9 +20,11 @@ import {
   exitWithError,
   loadPrivateKey,
   handleError,
+  initSecurityHardening,
 } from './lib/shared.js';
 
 async function main() {
+  initSecurityHardening();
   const args = parseArgs();
   const privateKey = loadPrivateKey();
 

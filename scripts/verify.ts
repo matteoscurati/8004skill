@@ -29,6 +29,7 @@ import {
   exitWithError,
   loadPrivateKey,
   handleError,
+  initSecurityHardening,
 } from './lib/shared.js';
 
 // ── Structured challenge format ─────────────────────────────────────
@@ -64,6 +65,7 @@ async function main() {
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
 
   if (action === 'sign') {
+    initSecurityHardening();
     const privateKey = loadPrivateKey();
     const signerAddress = privateKeyToAddress(privateKey as `0x${string}`);
 

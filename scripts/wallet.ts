@@ -25,6 +25,7 @@ import {
   exitWithError,
   loadPrivateKey,
   handleError,
+  initSecurityHardening,
 } from './lib/shared.js';
 
 async function main() {
@@ -53,6 +54,7 @@ async function main() {
     return;
   }
 
+  initSecurityHardening();
   const privateKey = loadPrivateKey();
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, privateKey, ...getOverridesFromEnv(chainId) }));
   const agent = await sdk.loadAgent(agentId);
@@ -61,6 +63,11 @@ async function main() {
     const walletAddress = requireArg(args, 'wallet-address', 'wallet to set');
     validateAddress(walletAddress, 'wallet-address');
     const walletPrivateKey = process.env.WALLET_PRIVATE_KEY;
+    if (walletPrivateKey && !/^0x[0-9a-fA-F]{64}$/.test(walletPrivateKey)) {
+      exitWithError(
+        'Invalid WALLET_PRIVATE_KEY format. Must be a 0x-prefixed 64 hex character private key.',
+      );
+    }
 
     const handle = await agent.setWallet(walletAddress, {
       newWalletPrivateKey: walletPrivateKey,

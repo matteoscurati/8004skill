@@ -2,6 +2,36 @@ import type { SDKConfig } from 'agent0-sdk';
 import { privateKeyToAddress } from 'viem/accounts';
 import { keystoreExists, loadKeystoreFile, findEntry, decryptKey } from './keystore.js';
 
+// ── Script version ──────────────────────────────────────────────────
+
+export const SCRIPT_VERSION = '1.1.0';
+
+// ── Security hardening ──────────────────────────────────────────────
+
+const SENSITIVE_ENV_VARS = ['KEYSTORE_PASSWORD', 'PRIVATE_KEY', 'WALLET_PRIVATE_KEY', 'FILECOIN_PRIVATE_KEY'];
+
+function cleanupEnvSecrets(): void {
+  for (const name of SENSITIVE_ENV_VARS) {
+    delete process.env[name];
+  }
+}
+
+/**
+ * Security initialization for scripts that handle private keys.
+ * Clears the CORE_PATTERN env var (defense-in-depth against core dumps)
+ * and installs signal handlers that wipe sensitive env vars on interruption.
+ */
+export function initSecurityHardening(): void {
+  delete process.env.CORE_PATTERN;
+
+  const cleanup = () => {
+    cleanupEnvSecrets();
+    process.exit(130);
+  };
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+}
+
 // ── CLI argument parsing ────────────────────────────────────────────
 
 export function parseArgs(): Record<string, string> {
@@ -168,6 +198,8 @@ export function loadPrivateKey(envVarName = 'PRIVATE_KEY'): string {
       err instanceof Error ? err.message : undefined,
     );
   }
+
+  delete process.env.KEYSTORE_PASSWORD;
 
   const derivedAddress = privateKeyToAddress(privateKey as `0x${string}`);
   if (derivedAddress.toLowerCase() !== entry.address.toLowerCase()) {
