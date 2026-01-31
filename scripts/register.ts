@@ -17,16 +17,13 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   exitWithError,
+  loadPrivateKey,
   handleError,
 } from './lib/shared.js';
 
 async function main() {
   const args = parseArgs();
-  const privateKey = process.env.PRIVATE_KEY;
-
-  if (!privateKey) {
-    exitWithError('PRIVATE_KEY environment variable is required');
-  }
+  const privateKey = loadPrivateKey();
 
   const chainId = parseChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');

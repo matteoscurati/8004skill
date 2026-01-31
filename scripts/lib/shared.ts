@@ -1,4 +1,6 @@
 import type { SDKConfig } from 'agent0-sdk';
+import { privateKeyToAddress } from 'viem/accounts';
+import { keystoreExists, loadKeystoreFile, findEntry, decryptKey } from './keystore.js';
 
 // ── CLI argument parsing ────────────────────────────────────────────
 
@@ -45,6 +47,11 @@ export function validateAgentId(id: string): void {
 export function validateAddress(addr: string, name: string): void {
   if (!/^0x[0-9a-fA-F]{40}$/.test(addr))
     exitWithError(`Invalid ${name}: "${addr}". Must be a 0x-prefixed 40-hex-char address.`);
+}
+
+export function validateSignature(sig: string): void {
+  if (!/^0x[0-9a-fA-F]+$/.test(sig))
+    exitWithError(`Invalid signature: "${sig}". Must be a 0x-prefixed hex string.`);
 }
 
 const VALID_IPFS = ['pinata', 'filecoinPin', 'node'] as const;
@@ -107,16 +114,70 @@ export function getOverridesFromEnv(chainId: number): {
   const subgraphUrl = process.env.SUBGRAPH_URL;
   if (subgraphUrl) result.subgraphUrl = subgraphUrl;
 
-  const identity = process.env.REGISTRY_ADDRESS_IDENTITY;
-  const reputation = process.env.REGISTRY_ADDRESS_REPUTATION;
-  if (identity || reputation) {
-    const reg: Record<string, string> = {};
-    if (identity) reg.IDENTITY = identity;
-    if (reputation) reg.REPUTATION = reputation;
-    result.registryOverrides = { [chainId]: reg };
+  const overrideEntries: Array<[string, string]> = [
+    ['IDENTITY', process.env.REGISTRY_ADDRESS_IDENTITY],
+    ['REPUTATION', process.env.REGISTRY_ADDRESS_REPUTATION],
+  ].filter((pair): pair is [string, string] => !!pair[1]);
+
+  for (const [name, addr] of overrideEntries) {
+    validateAddress(addr, `REGISTRY_ADDRESS_${name}`);
+  }
+  if (overrideEntries.length > 0) {
+    result.registryOverrides = { [chainId]: Object.fromEntries(overrideEntries) };
   }
 
   return result;
+}
+
+// ── Private key resolution ──────────────────────────────────────────
+
+export function loadPrivateKey(envVarName = 'PRIVATE_KEY'): string {
+  const fromEnv = process.env[envVarName];
+  if (fromEnv) return fromEnv;
+
+  if (!keystoreExists()) {
+    exitWithError(
+      `${envVarName} environment variable is not set and no keystore found. ` +
+        `Set ${envVarName} or import a key with: npx tsx scripts/keystore.ts --action import`,
+    );
+  }
+
+  const label = process.env.KEYSTORE_LABEL || 'default';
+  const ks = loadKeystoreFile();
+  const entry = findEntry(ks, label);
+  if (!entry) {
+    exitWithError(
+      `Keystore entry "${label}" not found. Available: ${ks.entries.map((e) => e.label).join(', ') || '(none)'}`,
+    );
+  }
+
+  const password = process.env.KEYSTORE_PASSWORD;
+  if (!password) {
+    exitWithError(
+      'KEYSTORE_PASSWORD environment variable is required to decrypt the keystore. ' +
+        `Set it or use ${envVarName} directly.`,
+    );
+  }
+
+  let privateKey: string;
+  try {
+    privateKey = decryptKey(entry, password);
+  } catch (err) {
+    exitWithError(
+      'Keystore decryption failed. Check KEYSTORE_PASSWORD.',
+      err instanceof Error ? err.message : undefined,
+    );
+  }
+
+  const derivedAddress = privateKeyToAddress(privateKey as `0x${string}`);
+  if (derivedAddress.toLowerCase() !== entry.address.toLowerCase()) {
+    exitWithError(
+      `Address mismatch: keystore entry "${label}" claims address ${entry.address} ` +
+        `but decrypted key derives ${derivedAddress}. Keystore may be tampered.`,
+    );
+  }
+
+  return privateKey;
 }
 
 // ── Error handling ──────────────────────────────────────────────────

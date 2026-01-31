@@ -16,6 +16,7 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   exitWithError,
+  loadPrivateKey,
   handleError,
 } from './lib/shared.js';
 
@@ -32,11 +33,7 @@ const MUTATION_FLAGS = [
 
 async function main() {
   const args = parseArgs();
-  const privateKey = process.env.PRIVATE_KEY;
-
-  if (!privateKey) {
-    exitWithError('PRIVATE_KEY environment variable is required');
-  }
+  const privateKey = loadPrivateKey();
 
   const agentId = requireArg(args, 'agent-id', 'agent to update');
   validateAgentId(agentId);

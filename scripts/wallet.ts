@@ -23,6 +23,7 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   exitWithError,
+  loadPrivateKey,
   handleError,
 } from './lib/shared.js';
 
@@ -33,7 +34,6 @@ async function main() {
   validateAgentId(agentId);
   const chainId = parseChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
-  const privateKey = process.env.PRIVATE_KEY;
 
   if (action === 'get') {
     const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
@@ -53,10 +53,7 @@ async function main() {
     return;
   }
 
-  if (!privateKey) {
-    exitWithError('PRIVATE_KEY environment variable is required for set/unset');
-  }
-
+  const privateKey = loadPrivateKey();
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, privateKey, ...getOverridesFromEnv(chainId) }));
   const agent = await sdk.loadAgent(agentId);
 

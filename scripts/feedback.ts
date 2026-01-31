@@ -18,16 +18,13 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   exitWithError,
+  loadPrivateKey,
   handleError,
 } from './lib/shared.js';
 
 async function main() {
   const args = parseArgs();
-  const privateKey = process.env.PRIVATE_KEY;
-
-  if (!privateKey) {
-    exitWithError('PRIVATE_KEY environment variable is required');
-  }
+  const privateKey = loadPrivateKey();
 
   const agentId = requireArg(args, 'agent-id', 'target agent');
   validateAgentId(agentId);
