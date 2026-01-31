@@ -27,6 +27,7 @@ import {
   parseArgs,
   requireArg,
   parseChainId,
+  requireChainId,
   validateAgentId,
   validateAddress,
   validateSignature,
@@ -43,10 +44,10 @@ async function main() {
   const action = requireArg(args, 'action', 'set|unset|get');
   const agentId = requireArg(args, 'agent-id', 'agent');
   validateAgentId(agentId);
-  const chainId = parseChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
 
   if (action === 'get') {
+    const chainId = parseChainId(args['chain-id']);
     const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
     const agent = await sdk.loadAgent(agentId);
     const wallet = await agent.getWallet();
@@ -64,6 +65,7 @@ async function main() {
     return;
   }
 
+  const chainId = requireChainId(args['chain-id']);
   initSecurityHardening();
   const privateKey = loadPrivateKey();
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, privateKey, ...getOverridesFromEnv(chainId) }));

@@ -13,7 +13,7 @@ import type { RegistrationFile } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
-  parseChainId,
+  requireChainId,
   splitCsv,
   buildSdkConfig,
   getOverridesFromEnv,
@@ -28,7 +28,7 @@ async function main() {
   const args = parseArgs();
   const privateKey = loadPrivateKey();
 
-  const chainId = parseChainId(args['chain-id']);
+  const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
   const name = requireArg(args, 'name', 'agent name');
   const description = requireArg(args, 'description', 'agent description');

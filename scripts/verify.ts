@@ -22,6 +22,7 @@ import {
   parseArgs,
   requireArg,
   parseChainId,
+  requireChainId,
   validateAgentId,
   validateSignature,
   buildSdkConfig,
@@ -61,10 +62,10 @@ async function main() {
   const action = requireArg(args, 'action', 'sign|verify');
   const agentId = requireArg(args, 'agent-id', 'agent');
   validateAgentId(agentId);
-  const chainId = parseChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
 
   if (action === 'sign') {
+    const chainId = requireChainId(args['chain-id']);
     initSecurityHardening();
     const privateKey = loadPrivateKey();
     const signerAddress = privateKeyToAddress(privateKey as `0x${string}`);
@@ -95,6 +96,7 @@ async function main() {
       ),
     );
   } else if (action === 'verify') {
+    const chainId = parseChainId(args['chain-id']);
     const signature = requireArg(args, 'signature', 'signature to verify');
     validateSignature(signature);
     const message = requireArg(args, 'message', 'signed message');

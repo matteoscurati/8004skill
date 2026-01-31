@@ -62,6 +62,16 @@ export function parseChainId(raw: string | undefined, fallback = '11155111'): nu
   return val;
 }
 
+export function requireChainId(raw: string | undefined): number {
+  if (raw === undefined) {
+    exitWithError(
+      '--chain-id is required for write operations. ' +
+        'Specify the target chain explicitly (e.g. --chain-id 11155111 for Sepolia).',
+    );
+  }
+  return parseChainId(raw);
+}
+
 export function parseIntStrict(raw: string | undefined, name: string): number {
   if (raw === undefined) exitWithError(`--${name} is required`);
   const val = parseInt(raw, 10);

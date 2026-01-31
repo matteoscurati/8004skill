@@ -15,7 +15,7 @@ import type { FeedbackFileInput } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
-  parseChainId,
+  requireChainId,
   parseDecimalInRange,
   validateAgentId,
   buildSdkConfig,
@@ -34,7 +34,7 @@ async function main() {
   const agentId = requireArg(args, 'agent-id', 'target agent');
   validateAgentId(agentId);
 
-  const chainId = parseChainId(args['chain-id']);
+  const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
   const action = args['action'] || 'give';
 

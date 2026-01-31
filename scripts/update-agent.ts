@@ -11,7 +11,7 @@ import { SDK, EndpointType } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
-  parseChainId,
+  requireChainId,
   splitCsv,
   validateAgentId,
   buildSdkConfig,
@@ -48,7 +48,7 @@ async function main() {
   const agentId = requireArg(args, 'agent-id', 'agent to update');
   validateAgentId(agentId);
 
-  const chainId = parseChainId(args['chain-id']);
+  const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
   const ipfsProvider = args['ipfs'];
   const pinataJwt = args['pinata-jwt'] || process.env.PINATA_JWT;
