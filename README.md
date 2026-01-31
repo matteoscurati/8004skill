@@ -28,6 +28,10 @@ You ──ask in natural language──> Agent ──reads──> SKILL.md
 
 Any of these (or similar phrasing) will start the corresponding wizard flow. If the agent is unsure what you need, it will show you the full operations menu.
 
+## Usage Guide
+
+See the **[Usage Guide](docs/usage-guide.md)** for agent-specific setup and workflows (Claude Code, OpenClaw, and other SKILL.md-compatible agents).
+
 ## Prerequisites
 
 - **Node.js** >= 22.0.0

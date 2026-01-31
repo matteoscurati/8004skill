@@ -3,7 +3,7 @@ name: 8004skill
 description: Interact with the ERC-8004 on-chain agent economy. Register agents, discover peers, manage reputation, and enable agent-to-agent interactions across EVM chains using the agent0-sdk.
 homepage: https://github.com/matteoscurati/8004skill
 user-invocable: true
-metadata: {"openclaw":{"os":["darwin","linux"],"requires":{"bins":["node","npx"]},"install":[{"kind":"node","command":"npm install --prefix {baseDir}"}]}}
+metadata: {"openclaw":{"emoji":"🔗","os":["darwin","linux"],"requires":{"bins":["node","npx"]},"install":[{"id":"brew","kind":"brew","formula":"node","bins":["node","npx"],"label":"Install Node.js (brew)"}]}}
 ---
 
 # 8004skill - ERC-8004 Agent Economy
