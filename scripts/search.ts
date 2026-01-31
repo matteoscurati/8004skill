@@ -14,6 +14,7 @@ import {
   parseChainId,
   buildSdkConfig,
   getOverridesFromEnv,
+  fetchWithRetry,
   exitWithError,
   handleError,
 } from './lib/shared.js';
@@ -26,27 +27,27 @@ async function semanticSearch(
   options: { chainId?: number; mcpOnly?: boolean; a2aOnly?: boolean; limit?: number },
 ) {
   const filters: { in?: Record<string, unknown[]>; exists?: string[] } = {};
-  if (options.chainId) {
-    filters.in = { chainId: [options.chainId] };
-  }
-  const existsFields: string[] = [];
-  if (options.mcpOnly) existsFields.push('mcpEndpoint');
-  if (options.a2aOnly) existsFields.push('a2aEndpoint');
+  if (options.chainId) filters.in = { chainId: [options.chainId] };
+  const existsFields = [
+    ...(options.mcpOnly ? ['mcpEndpoint'] : []),
+    ...(options.a2aOnly ? ['a2aEndpoint'] : []),
+  ];
   if (existsFields.length > 0) filters.exists = existsFields;
 
+  const hasFilters = filters.in !== undefined || filters.exists !== undefined;
   const searchUrl = process.env.SEARCH_API_URL || DEFAULT_SEARCH_URL;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   let response: Response;
   try {
-    response = await fetch(searchUrl, {
+    response = await fetchWithRetry(searchUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query,
         limit: options.limit || 10,
-        filters: Object.keys(filters).length > 0 ? filters : undefined,
+        filters: hasFilters ? filters : undefined,
       }),
       signal: controller.signal,
     });

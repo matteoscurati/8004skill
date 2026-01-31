@@ -111,6 +111,48 @@ export function validateIpfsProvider(raw: string): IpfsProvider {
   return raw as IpfsProvider;
 }
 
+// ── Fetch with retry ────────────────────────────────────────────────
+
+const RETRY_MAX = 3;
+const RETRY_BASE_MS = 1_000;
+
+export async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+  let lastError: unknown;
+  let lastResponse: Response | undefined;
+
+  for (let attempt = 0; attempt <= RETRY_MAX; attempt++) {
+    if (attempt > 0) {
+      await sleep(retryDelay(lastResponse, attempt - 1));
+    }
+
+    try {
+      lastResponse = await fetch(url, options);
+    } catch (err) {
+      lastError = err;
+      continue;
+    }
+
+    const isRetryable = lastResponse.status === 429 || lastResponse.status >= 500;
+    if (!isRetryable) return lastResponse;
+  }
+
+  if (lastResponse) return lastResponse;
+  throw lastError;
+}
+
+function retryDelay(response: Response | undefined, retryIndex: number): number {
+  const retryAfter = response?.headers.get('retry-after');
+  if (retryAfter) {
+    const seconds = parseInt(retryAfter, 10);
+    return Math.min(Number.isNaN(seconds) ? RETRY_BASE_MS : seconds * 1000, 30_000);
+  }
+  return RETRY_BASE_MS * 2 ** retryIndex;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 // ── SDK config builder ──────────────────────────────────────────────
 
 export function buildSdkConfig(opts: {
