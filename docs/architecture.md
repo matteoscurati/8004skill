@@ -42,7 +42,7 @@ Key properties:
 ```
 +------------------+     1. reads      +------------------+
 |    AI Agent      | <-----------------+    SKILL.md      |
-|  (LLM runtime)  |                    | (7 wizard flows) |
+|  (LLM runtime)  |                    | (8 ops + Update) |
 +--------+---------+                   +------------------+
          |
          | 2. presents menus, gathers inputs conversationally
@@ -87,7 +87,7 @@ Key properties:
 
 ### Step-by-step
 
-1. **SKILL.md load** -- The agent reads the skill definition which declares 7 operations as wizard flows with input schemas, CLI templates, and output formatting rules.
+1. **SKILL.md load** -- The agent reads the skill definition which declares 8 operations plus an Update Agent sub-flow as wizard flows with input schemas, CLI templates, and output formatting rules.
 2. **Intent mapping** -- The agent matches user input ("register my agent") to an operation (Operation 2: Register Agent).
 3. **Input gathering** -- The agent walks the user through required/optional fields conversationally (name, description, chain, endpoints).
 4. **Command construction** -- The agent assembles the CLI invocation internally. Raw commands are never exposed to the user.
@@ -125,8 +125,11 @@ scripts/
   reputation.ts      # Reputation summary + feedback list
   connect.ts         # Agent discovery and inspection
   wallet.ts          # EIP-712 wallet management
+  verify.ts          # EIP-191 identity signing and verification
+  keystore.ts        # Interactive encrypted keystore management (user-run, not by agent)
   lib/
     shared.ts        # CLI parsing, validation, SDK config helpers
+    keystore.ts      # Encrypted keystore library (AES-256-GCM, PBKDF2)
 ```
 
 ### Shared Library (`scripts/lib/shared.ts`)
@@ -196,6 +199,7 @@ Write operations add:
                   | reputation.ts             |  Reputation + feedback list
                   | connect.ts                |  Agent discovery / inspection
                   | wallet.ts --action get    |  Read wallet address
+                  | verify.ts --action verify |  Verify identity signature
                   +---------------------------+
 
                   +---------------------------+
@@ -207,6 +211,7 @@ Write operations add:
                   | feedback.ts               |  Submit on-chain feedback
                   | wallet.ts --action set    |  Set wallet (+ WALLET_PRIVATE_KEY)
                   | wallet.ts --action unset  |  Unset wallet
+                  | verify.ts --action sign   |  Sign identity proof
                   +---------------------------+
 ```
 
@@ -365,11 +370,12 @@ Environment variables pass through the process environment directly. Some can al
 
 ### Principles
 
-1. **No secrets on disk.** Private keys exist only in environment variables, never in config files or script output.
+1. **No plaintext secrets on disk.** Private keys are passed via environment variables or stored in an encrypted keystore (`~/.8004skill/keystore.json`, AES-256-GCM with PBKDF2-derived keys). Plaintext keys are never written to disk.
 2. **Preflight check.** `check-env.ts` runs before every write operation to confirm signer address with the user.
 3. **Explicit confirmation.** All on-chain writes require user approval -- the agent shows transaction details and asks before executing.
 4. **Opaque execution.** Raw CLI commands are never shown to the user. The agent builds and executes them internally.
-5. **Restrictive permissions.** Config directory is `chmod 700`, config file is `chmod 600`.
+5. **Restrictive permissions.** Config directory is `chmod 700`, config file and keystore are `chmod 600`.
+6. **Signal hardening.** Write scripts call `initSecurityHardening()` at startup to install signal handlers that wipe sensitive env vars (`PRIVATE_KEY`, `WALLET_PRIVATE_KEY`) on interruption.
 
 ### Threat Surface
 
@@ -378,7 +384,11 @@ Environment variables pass through the process environment directly. Some can al
 | Layer               | Threat                            | Mitigation        |
 +---------------------+-----------------------------------+-------------------+
 | Environment vars    | Key leakage via process listing   | Short-lived       |
-|                     |                                   | processes         |
+|                     |                                   | processes +       |
+|                     |                                   | signal wipe       |
++---------------------+-----------------------------------+-------------------+
+| Encrypted keystore  | Brute-force / unauthorized read   | AES-256-GCM,     |
+|                     |                                   | PBKDF2, chmod 600 |
 +---------------------+-----------------------------------+-------------------+
 | Config file         | Unauthorized read                 | chmod 600         |
 +---------------------+-----------------------------------+-------------------+
@@ -484,7 +494,7 @@ The SDK has built-in defaults for Mainnet and Sepolia. Other chains require `reg
 
 ## Reference Documentation
 
-The `reference/` directory contains three files used by the agent at runtime to answer questions and configure scripts.
+The `reference/` directory contains four files used by the agent at runtime to answer questions and configure scripts.
 
 ### `reference/chains.md`
 
@@ -502,14 +512,24 @@ Complete `agent0-sdk` API surface: `SDK` class constructor, methods, `Agent` cla
 
 ERC-8004 data structures: registration file format, agent summary (from subgraph), feedback structure, feedback file (off-chain), reputation summary, on-chain metadata, and the EIP-712 wallet signature scheme. Scripts produce output conforming to these structures.
 
+### `reference/security.md`
+
+Security rules for key handling, confirmation requirements, and untrusted content policies. The agent reads this to enforce:
+
+- Never showing raw CLI commands to users
+- Always confirming before write operations
+- Never logging or echoing private keys
+- Treating untrusted content (user-provided URLs, IPFS data) safely
+
 ### How Scripts Use Reference Data
 
 Scripts do not read reference files directly. The relationship is:
 
 ```
-reference/chains.md     -> The agent reads -> passes --chain-id, --rpc-url to scripts
-reference/sdk-api.md    -> The agent reads -> understands what scripts can do
+reference/chains.md       -> The agent reads -> passes --chain-id, --rpc-url to scripts
+reference/sdk-api.md      -> The agent reads -> understands what scripts can do
 reference/agent-schema.md -> The agent reads -> formats script JSON output for user
+reference/security.md     -> The agent reads -> enforces security rules during operations
 ```
 
 The SDK itself has built-in chain configs. Reference docs serve as human-readable documentation that the agent uses for contextual understanding and user-facing explanations.

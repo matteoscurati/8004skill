@@ -33,10 +33,11 @@ All scripts live in `scripts/` and follow the same pattern: parse CLI args → v
 
 ### Reference docs
 
-`reference/` contains three markdown files used by the skill at runtime:
+`reference/` contains four markdown files used by the skill at runtime:
 - `chains.md` — supported EVM chains, contract addresses, RPC endpoints
 - `sdk-api.md` — agent0-sdk API surface (classes, methods, types)
 - `agent-schema.md` — ERC-8004 data structures (registration files, feedback, reputation)
+- `security.md` — security rules for key handling, confirmation requirements, and untrusted content
 
 ### Configuration
 

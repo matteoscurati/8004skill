@@ -182,9 +182,9 @@ Then point your agent to the SKILL.md file:
 The SKILL.md body defines:
 
 - **Auto-Setup** -- check for `node_modules`, run `npm install` if missing
-- **Operations Menu** -- 8 operations with trigger phrases, input schemas, CLI templates, and output formatting
-- **Security Rules** -- never show raw commands, always confirm before writes, never log private keys
-- **Reference Files** -- paths to `reference/chains.md`, `reference/sdk-api.md`, and `reference/agent-schema.md`
+- **Operations Menu** -- 8 operations plus an Update Agent sub-flow, with trigger phrases, input schemas, CLI templates, and output formatting
+- **Security Rules** -- defined in `reference/security.md` (linked from SKILL.md): never show raw commands, always confirm before writes, never log private keys
+- **Reference Files** -- listed at the top of the SKILL.md body: `reference/chains.md`, `reference/sdk-api.md`, `reference/agent-schema.md`, and `reference/security.md`
 
 ### Minimal integration example
 

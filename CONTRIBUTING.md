@@ -46,6 +46,7 @@ The `reference/` directory contains docs consumed by the skill at runtime. Keep 
 - `chains.md` — supported chains, contract addresses, RPC endpoints
 - `sdk-api.md` — agent0-sdk API surface
 - `agent-schema.md` — ERC-8004 data structures
+- `security.md` — security rules for key handling, confirmation requirements, and untrusted content
 
 ## Architecture
 

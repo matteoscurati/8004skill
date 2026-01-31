@@ -116,6 +116,8 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 | `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning |
 | `IPFS_NODE_URL` | IPFS via local node | URL of the IPFS node API |
 | `WALLET_PRIVATE_KEY` | Wallet set | Private key of the wallet being set (EIP-712) |
+| `KEYSTORE_PASSWORD` | Write ops (keystore mode) | Password to decrypt the encrypted keystore |
+| `KEYSTORE_LABEL` | Write ops (keystore mode, optional) | Label of the key to use when multiple keys are stored |
 | `SEARCH_API_URL` | Semantic search (optional) | Override URL for the semantic search API |
 | `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
 | `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
@@ -158,7 +160,7 @@ ln -s "$(pwd)" ~/.openclaw/skills/8004skill
 
 ## Security
 
-- Private keys are **never** stored on disk. They are passed via environment variables only.
+- Private keys are **never stored in plaintext** on disk. They are passed via environment variables, or stored in an encrypted keystore (`~/.8004skill/keystore.json`, AES-256-GCM with PBKDF2-derived keys).
 - The skill runs a preflight check before every write operation to confirm the signer address.
 - All on-chain writes require explicit user confirmation before submission.
 - Config files are created with `chmod 600` (owner-only read/write).
