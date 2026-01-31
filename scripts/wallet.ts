@@ -2,9 +2,18 @@
 /**
  * Manage agent wallet on-chain (EIP-712 signed).
  *
+ * Three flows for `set`:
+ *   1. One-wallet: wallet address = signer address → no WALLET_PRIVATE_KEY needed
+ *   2. Two-wallet: wallet address ≠ signer → WALLET_PRIVATE_KEY required
+ *   3. Pre-signed: --signature flag with an EIP-712 signature (hardware wallet, MPC)
+ *
  * Usage:
  *   PRIVATE_KEY="0x..." npx tsx wallet.ts --action set --agent-id 11155111:42 \
  *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org --wallet-address 0x...
+ *
+ *   PRIVATE_KEY="0x..." npx tsx wallet.ts --action set --agent-id 11155111:42 \
+ *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org --wallet-address 0x... \
+ *     --signature 0x...
  *
  *   PRIVATE_KEY="0x..." npx tsx wallet.ts --action unset --agent-id 11155111:42 \
  *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org
@@ -20,6 +29,7 @@ import {
   parseChainId,
   validateAgentId,
   validateAddress,
+  validateSignature,
   buildSdkConfig,
   getOverridesFromEnv,
   exitWithError,
@@ -62,20 +72,30 @@ async function main() {
   if (action === 'set') {
     const walletAddress = requireArg(args, 'wallet-address', 'wallet to set');
     validateAddress(walletAddress, 'wallet-address');
+    const preSignedSignature = args['signature'];
+    if (preSignedSignature) validateSignature(preSignedSignature);
     const walletPrivateKey = process.env.WALLET_PRIVATE_KEY;
+
     if (walletPrivateKey && !/^0x[0-9a-fA-F]{64}$/.test(walletPrivateKey)) {
       exitWithError(
         'Invalid WALLET_PRIVATE_KEY format. Must be a 0x-prefixed 64 hex character private key.',
       );
     }
 
-    const handle = await agent.setWallet(walletAddress, {
-      newWalletPrivateKey: walletPrivateKey,
-    });
+    // --signature takes priority over WALLET_PRIVATE_KEY.
+    // If neither is provided, the SDK uses the signer key (one-wallet flow).
+    let opts: { signature?: string; newWalletPrivateKey?: string } = {};
+    if (preSignedSignature) {
+      opts = { signature: preSignedSignature };
+    } else if (walletPrivateKey) {
+      opts = { newWalletPrivateKey: walletPrivateKey };
+    }
+
+    const handle = await agent.setWallet(walletAddress, opts);
 
     if (handle) {
       console.error(JSON.stringify({ status: 'submitted', txHash: handle.hash }));
-      await handle.waitMined({ timeoutMs: 120_000 });
+      await handle.waitMined({ timeoutMs: 180_000, confirmations: 2 });
       console.log(
         JSON.stringify(
           {
@@ -107,7 +127,7 @@ async function main() {
 
     if (handle) {
       console.error(JSON.stringify({ status: 'submitted', txHash: handle.hash }));
-      await handle.waitMined({ timeoutMs: 120_000 });
+      await handle.waitMined({ timeoutMs: 180_000, confirmations: 2 });
       console.log(
         JSON.stringify(
           {

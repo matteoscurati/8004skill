@@ -69,6 +69,24 @@ export function parseIntStrict(raw: string | undefined, name: string): number {
   return val;
 }
 
+export function parseDecimalInRange(raw: string, name: string, min: number, max: number): number {
+  const val = parseFloat(raw);
+  if (Number.isNaN(val)) {
+    exitWithError(`Invalid --${name}: "${raw}". Must be a number (decimals allowed, e.g. 85, 99.77, -3.2).`);
+  }
+  if (val < min || val > max) {
+    exitWithError(`--${name} must be between ${min} and ${max}`);
+  }
+  return val;
+}
+
+/**
+ * Split a comma-separated string into trimmed, non-empty values.
+ */
+export function splitCsv(raw: string): string[] {
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export function validateAgentId(id: string): void {
   if (!/^\d+:\d+$/.test(id))
     exitWithError(`Invalid agent-id "${id}". Expected format: chainId:tokenId (e.g. 11155111:42)`);

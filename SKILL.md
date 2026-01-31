@@ -132,7 +132,10 @@ Ask the user step by step:
 4. **A2A endpoint URL** (optional) - if the agent exposes an A2A agent card
 5. **Image URL** (optional)
 6. **Active status** (default: true)
-7. **IPFS provider** - use from config, or ask. Alternatively ask if they want HTTP URI instead.
+7. **OASF Skills** (optional) - comma-separated OASF skill slugs (e.g., `natural_language_processing/summarization`). Validated against the OASF taxonomy by the SDK.
+8. **OASF Domains** (optional) - comma-separated OASF domain slugs (e.g., `finance_and_business/investment_services`). Validated against the OASF taxonomy by the SDK.
+9. **x402 support** (optional, default: false) - whether the agent supports the x402 proof-of-payment protocol
+10. **IPFS provider** - use from config, or ask. Alternatively ask if they want HTTP URI instead.
 
 ### Confirmation
 
@@ -143,6 +146,9 @@ Before executing, show a summary:
 - Description: {description}
 - MCP endpoint: {url or "none"}
 - A2A endpoint: {url or "none"}
+- OASF Skills: {skills or "none"}
+- OASF Domains: {domains or "none"}
+- x402 support: {yes/no}
 - IPFS provider: {provider}
 - Estimated gas: standard ERC-721 mint (~150k gas)
 
@@ -163,7 +169,11 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/register.ts \
   [--mcp-endpoint <url>] \
   [--a2a-endpoint <url>] \
   [--active true|false] \
-  [--image <url>]
+  [--image <url>] \
+  [--skills "slug1,slug2"] \
+  [--domains "slug1,slug2"] \
+  [--validate-oasf true|false] \
+  [--x402 true]
 ```
 
 For HTTP registration, use `--http-uri <uri>` instead of `--ipfs`.
@@ -321,11 +331,12 @@ After showing results, offer:
 ### Input Gathering
 
 1. **Agent ID** (required) - which agent to review. If not known, offer to search first.
-2. **Rating value** (required) - integer from -100 to 100:
+2. **Rating value** (required) - number from -100 to 100 (decimals allowed):
    - 100 = excellent
+   - 99.77 = near-perfect (e.g., uptime 99.77%)
    - 50 = good
    - 0 = neutral
-   - -50 = poor
+   - -3.2 = slightly negative (e.g., yield -3.2%)
    - -100 = terrible
 3. **Tags** (optional, up to 2):
    - Common: "quality", "reliability", "speed", "accuracy", "helpfulness"
@@ -336,7 +347,7 @@ After showing results, offer:
 
 Show summary:
 - Target Agent: {agentId}
-- Rating: {value}/100
+- Rating: {value} (range: -100 to 100)
 - Tags: {tag1}, {tag2}
 - Text: {text || "none"}
 - Signer: {signerAddress}
@@ -364,13 +375,35 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/feedback.ts \
 On success:
 - Transaction hash: {txHash}
 - Reviewer: {reviewer address}
-- Rating submitted: {value}/100
+- Rating submitted: {value}
 - Tags: {tags}
+
+### Revoke Feedback
+
+To revoke previously submitted feedback:
+
+1. **Agent ID** (required) - the agent the feedback was given to
+2. **Feedback index** (required) - the index of the feedback to revoke (0-based, as returned by the reputation/feedback search)
+
+**Confirmation**: Show the agent ID and feedback index. Ask: "Revoke this feedback on-chain?"
+
+**Execution:**
+```
+PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/feedback.ts \
+  --action revoke \
+  --agent-id <agentId> \
+  --chain-id <chainId> \
+  --rpc-url <rpcUrl> \
+  --feedback-index <index>
+```
+
+**Result**: Transaction hash and confirmation that feedback was revoked.
 
 ### Error Handling
 - "insufficient funds": Need gas tokens on the target chain.
-- Value out of range: Must be -100 to 100.
+- Value out of range: Must be -100 to 100 (decimals allowed).
 - Agent not found: Verify agent ID and chain.
+- Invalid feedback index: Must be a non-negative integer.
 
 ---
 
@@ -463,7 +496,10 @@ Skills: {a2aSkills.join(", ")}
 ### Prerequisites
 1. Load config.
 2. For `set` and `unset`: run preflight check, verify `PRIVATE_KEY` is set.
-3. For `set`: also need `WALLET_PRIVATE_KEY` env var for the EIP-712 signature.
+3. For `set`, the wallet signature depends on the flow:
+   - **One-wallet flow**: wallet address = signer address → no `WALLET_PRIVATE_KEY` needed (SDK signs with the signer key)
+   - **Two-wallet flow**: wallet address ≠ signer → `WALLET_PRIVATE_KEY` env var required
+   - **Pre-signed flow**: `--signature` flag with a pre-generated EIP-712 signature (for hardware wallets, MPC setups)
 
 ### Input Gathering
 
@@ -478,7 +514,7 @@ Show:
 - Agent: {agentId}
 - Wallet address: {walletAddress} (for set)
 - Signer: {signerAddress}
-- Note: This requires an EIP-712 signature from the wallet being set.
+- Flow: {one-wallet | two-wallet | pre-signed} — explain which applies based on whether wallet address matches signer, WALLET_PRIVATE_KEY is set, or --signature is provided
 
 Ask: "Proceed?"
 
@@ -495,12 +531,13 @@ npx tsx {baseDir}/scripts/wallet.ts \
 
 **Set wallet:**
 ```
-PRIVATE_KEY="$PRIVATE_KEY" WALLET_PRIVATE_KEY="$WALLET_PRIVATE_KEY" npx tsx {baseDir}/scripts/wallet.ts \
+PRIVATE_KEY="$PRIVATE_KEY" [WALLET_PRIVATE_KEY="$WALLET_PRIVATE_KEY"] npx tsx {baseDir}/scripts/wallet.ts \
   --action set \
   --agent-id <agentId> \
   --chain-id <chainId> \
   --rpc-url <rpcUrl> \
-  --wallet-address <address>
+  --wallet-address <address> \
+  [--signature <eip712Signature>]
 ```
 
 **Unset wallet:**
@@ -519,8 +556,8 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/wallet.ts \
 - **Unset**: "Wallet unset. Transaction: {txHash}"
 
 ### Error Handling
-- "WALLET_PRIVATE_KEY" not set: Required for the EIP-712 signature when setting a wallet.
-- "Wallet already set to this address": No transaction needed.
+- "WALLET_PRIVATE_KEY" not set: Required only for the two-wallet flow (wallet address ≠ signer address). Not needed if using the one-wallet flow or providing `--signature`.
+- "Wallet already set to this address": No transaction needed (returns undefined).
 - Ownership errors: Only the agent owner can set/unset the wallet.
 
 ---
@@ -626,6 +663,10 @@ If `verified: false`, explain that the signature does not match the agent's regi
    - A2A endpoint (add/change/remove)
    - Active status
    - Image
+   - OASF Skills (add/remove)
+   - OASF Domains (add/remove)
+   - x402 support (enable/disable)
+   - Metadata (set key-value pairs / delete keys)
 
 ### Confirmation
 
@@ -646,7 +687,15 @@ PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/update-agent.ts \
   [--a2a-endpoint <url>] \
   [--active true|false] \
   [--remove-mcp] \
-  [--remove-a2a]
+  [--remove-a2a] \
+  [--skills "slug1,slug2"] \
+  [--domains "slug1,slug2"] \
+  [--remove-skills "slug1,slug2"] \
+  [--remove-domains "slug1,slug2"] \
+  [--validate-oasf true|false] \
+  [--x402 true|false] \
+  [--metadata '{"key":"value"}'] \
+  [--del-metadata "key1,key2"]
 ```
 
 ---
@@ -704,7 +753,7 @@ The encrypted keystore is strongly recommended over raw `PRIVATE_KEY` env vars. 
 | `PINATA_JWT` | IPFS via Pinata | JWT token for Pinata IPFS pinning |
 | `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning service |
 | `IPFS_NODE_URL` | IPFS via local node | URL of the IPFS node API |
-| `WALLET_PRIVATE_KEY` | Wallet set | Private key of the wallet being set (for EIP-712 signature) |
+| `WALLET_PRIVATE_KEY` | Wallet set (two-wallet flow) | Private key of the wallet being set (for EIP-712 signature). Only needed when wallet address ≠ signer address and no `--signature` is provided. |
 | `SEARCH_API_URL` | Semantic search (optional) | Override URL for the semantic search API |
 | `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
 | `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |

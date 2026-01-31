@@ -33,7 +33,8 @@ sdk.searchAgents(filters?: SearchParams, options?: SearchOptions): Promise<{ ite
 sdk.searchAgentsByReputation(filters?: ReputationSearchFilters, options?: ReputationSearchOptions): Promise<{ items: AgentSummary[], nextCursor?: string }>
 
 // Feedback
-sdk.giveFeedback(agentId, value, tag1?, tag2?, endpoint?, feedbackFile?): Promise<TransactionHandle<Feedback>>
+sdk.giveFeedback(agentId, value: number | string, tag1?, tag2?, endpoint?, feedbackFile?): Promise<TransactionHandle<Feedback>>
+  // value accepts decimals: e.g. 85, "99.77", "-3.2". The SDK encodes as int128 value + uint8 valueDecimals.
 sdk.getFeedback(agentId, clientAddress, feedbackIndex): Promise<Feedback>
 sdk.searchFeedback(filters: FeedbackSearchFilters, options?: FeedbackSearchOptions): Promise<Feedback[]>
 sdk.revokeFeedback(agentId, feedbackIndex): Promise<TransactionHandle<Feedback>>
@@ -84,11 +85,15 @@ agent.setActive(active: boolean): this
 agent.setX402Support(x402Support: boolean): this
 agent.setTrust(reputation?, cryptoEconomic?, teeAttestation?): this
 agent.setMetadata(kv: Record<string, unknown>): this
+agent.delMetadata(key: string): this
 agent.updateInfo(name?, description?, image?): this
 
 // Wallet (on-chain)
-agent.setWallet(newWallet, opts?): Promise<TransactionHandle>
-agent.unsetWallet(): Promise<TransactionHandle>
+agent.setWallet(newWallet, opts?): Promise<TransactionHandle<RegistrationFile> | undefined>
+  // opts: { deadline?: number, newWalletPrivateKey?: string, signature?: string | Uint8Array }
+  // Returns undefined when wallet is already set to the target address
+agent.unsetWallet(): Promise<TransactionHandle<RegistrationFile> | undefined>
+  // Returns undefined when wallet is already unset
 agent.getWallet(): Promise<Address | undefined>
 
 // Registration (on-chain)
@@ -109,7 +114,17 @@ agent.getMetadata(): Record<string, unknown>
 ```typescript
 const handle = await agent.registerIPFS();
 handle.hash     // transaction hash (0x...)
-await handle.waitMined()  // wait for confirmation, returns { result }
+await handle.waitMined(opts?)   // wait for confirmation, returns { result }
+await handle.waitConfirmed(opts?)  // alias for waitMined()
+```
+
+### TransactionWaitOptions
+
+```typescript
+{
+  timeoutMs?: number,       // max wait time in ms (default: 120_000)
+  confirmations?: number,   // number of block confirmations to wait for (default: 1)
+}
 ```
 
 ## Search Filters (SearchParams)

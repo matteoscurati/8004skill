@@ -14,6 +14,7 @@ import {
   parseArgs,
   requireArg,
   parseChainId,
+  splitCsv,
   buildSdkConfig,
   getOverridesFromEnv,
   exitWithError,
@@ -40,6 +41,10 @@ async function main() {
   const active = args['active'] !== 'false';
   const image = args['image'];
   const httpUri = args['http-uri'];
+  const skills = args['skills'];
+  const domains = args['domains'];
+  const validateOasf = args['validate-oasf'] !== 'false';
+  const x402 = args['x402'] === 'true';
 
   const sdk = new SDK(
     buildSdkConfig({
@@ -60,6 +65,14 @@ async function main() {
   if (a2aEndpoint) await agent.setA2A(a2aEndpoint);
   agent.setActive(active);
   agent.setTrust(true);
+  if (x402) agent.setX402Support(true);
+
+  if (skills) {
+    for (const slug of splitCsv(skills)) agent.addSkill(slug, validateOasf);
+  }
+  if (domains) {
+    for (const slug of splitCsv(domains)) agent.addDomain(slug, validateOasf);
+  }
 
   let regFile: RegistrationFile;
   let txHash: string;

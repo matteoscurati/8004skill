@@ -122,7 +122,7 @@
 }
 ```
 
-Value range: -100 to 100 (stored as int128 with 2 decimal places on-chain).
+Value range: -100 to 100 (stored as `int128 value` + `uint8 valueDecimals`, supporting up to 18 decimal places on-chain). The SDK accepts numbers or decimal strings and encodes automatically.
 
 ## On-Chain Metadata
 

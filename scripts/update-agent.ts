@@ -12,6 +12,7 @@ import {
   parseArgs,
   requireArg,
   parseChainId,
+  splitCsv,
   validateAgentId,
   buildSdkConfig,
   getOverridesFromEnv,
@@ -30,6 +31,13 @@ const MUTATION_FLAGS = [
   'active',
   'remove-mcp',
   'remove-a2a',
+  'skills',
+  'domains',
+  'remove-skills',
+  'remove-domains',
+  'x402',
+  'metadata',
+  'del-metadata',
 ] as const;
 
 async function main() {
@@ -91,6 +99,38 @@ async function main() {
 
   if (args['remove-a2a'] === 'true') {
     agent.removeEndpoint({ type: EndpointType.A2A });
+  }
+
+  if (args['x402'] !== undefined) {
+    agent.setX402Support(args['x402'] !== 'false');
+  }
+
+  const validateOasf = args['validate-oasf'] !== 'false';
+
+  if (args['skills']) {
+    for (const slug of splitCsv(args['skills'])) agent.addSkill(slug, validateOasf);
+  }
+  if (args['domains']) {
+    for (const slug of splitCsv(args['domains'])) agent.addDomain(slug, validateOasf);
+  }
+  if (args['remove-skills']) {
+    for (const slug of splitCsv(args['remove-skills'])) agent.removeSkill(slug);
+  }
+  if (args['remove-domains']) {
+    for (const slug of splitCsv(args['remove-domains'])) agent.removeDomain(slug);
+  }
+
+  if (args['metadata']) {
+    let kv: Record<string, unknown>;
+    try {
+      kv = JSON.parse(args['metadata']);
+    } catch {
+      exitWithError(`Invalid --metadata: not valid JSON. Expected format: '{"key":"value"}'`);
+    }
+    agent.setMetadata(kv);
+  }
+  if (args['del-metadata']) {
+    for (const key of splitCsv(args['del-metadata'])) agent.delMetadata(key);
   }
 
   if (ipfsProvider) {
