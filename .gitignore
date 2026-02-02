@@ -9,6 +9,9 @@ dist/
 *.log
 .DS_Store
 
+# Verification scripts
+_verify/
+
 # IDE
 .vscode/
 .idea/
