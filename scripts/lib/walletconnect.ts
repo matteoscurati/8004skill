@@ -162,7 +162,7 @@ export async function initWalletConnectProvider(opts: {
       });
 
       provider.on('display_uri', (uri: string) => {
-        console.error(JSON.stringify({ status: 'pairing', message: 'Scan QR code with your wallet app' }));
+        console.error(JSON.stringify({ status: 'pairing', uri }));
         qrcode.generate(uri, { small: true }, (code: string) => {
           console.error(code);
         });

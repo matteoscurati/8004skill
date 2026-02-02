@@ -68,6 +68,8 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 
 **WalletConnect signing** — all write operations use WalletConnect v2 to sign transactions. The agent never holds private keys — signing happens in the user's wallet app (MetaMask, Rainbow, etc.). The user will receive a push notification or pop-up in their wallet app to review and approve each transaction.
 
+**Pairing display** — when a script emits `{ "status": "pairing", "uri": "wc:..." }` on stderr, extract the `uri` field and present it to the user in a fenced code block. Tell the user: "Scan the QR code in the tool output, or copy the URI below and paste it in your wallet app (MetaMask → WalletConnect → Paste URI)." The QR code may be truncated in collapsed tool output, so always include the URI text as a fallback.
+
 **Secret handling (mandatory):**
 - **NEVER** ask, accept, or prompt the user to type/paste a private key, mnemonic, seed phrase, or password in the chat. Refuse immediately if offered — chat history is stored and secrets would be permanently exposed.
 - **NEVER** display or echo a private key or password in any response.
