@@ -130,6 +130,8 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
 
 **Triggered by**: "register agent", "create agent", "register on-chain", "mint agent NFT".
 
+> **Best practices**: Read [Registration.md](https://github.com/erc-8004/best-practices/blob/main/Registration.md) and [ERC8004SPEC.md](https://github.com/erc-8004/best-practices/blob/main/src/ERC8004SPEC.md) before collecting inputs. Follow the Four Golden Rules: (1) write a clear name, encourage an image, write a detailed description with capabilities and pricing; (2) encourage at least one endpoint (MCP or A2A); (3) strongly recommend OASF skills/domains; (4) include ERC-8004 registration details in metadata.
+
 ### Prerequisites
 Standard write prerequisites apply (see above). Additionally: IPFS provider must be configured.
 
@@ -144,6 +146,9 @@ Ask step by step:
 6. **Active status** (default: true)
 7. **OASF Skills** (optional) - comma-separated slugs (e.g., `natural_language_processing/summarization`)
 8. **OASF Domains** (optional) - comma-separated slugs (e.g., `finance_and_business/investment_services`)
+
+> **OASF taxonomy**: Use [agntcy/oasf](https://github.com/agntcy/oasf) as the canonical slug source. Proactively suggest relevant skills/domains based on the agent's description.
+
 9. **x402 support** (optional, default: false)
 10. **IPFS provider** - use from config, or ask. Alternatively ask if they want HTTP URI instead.
 
@@ -236,6 +241,8 @@ Format as table: #, Agent ID, Name, MCP, A2A, Description. Offer follow-ups: loa
 
 **Triggered by**: "give feedback", "rate agent", "review agent", "leave feedback".
 
+> **Best practices**: Read [Reputation.md](https://github.com/erc-8004/best-practices/blob/main/Reputation.md) before guiding the user. Standard tags: `starred`, `reachable`, `uptime`, `successRate`, `responseTime`, `revenues`, `tradingYield` — suggest appropriate ones based on context. Star-to-scale: 1★=20, 2★=40, 3★=60, 4★=80, 5★=100; negative feedback uses values below 0. Remind the user to submit from their registered agentWallet.
+
 ### Prerequisites
 Standard write prerequisites apply (see above).
 
@@ -243,7 +250,7 @@ Standard write prerequisites apply (see above).
 
 1. **Agent ID** (required) - offer to search if unknown
 2. **Rating value** (required) - number from -100 to 100 (decimals allowed, e.g., 99.77, -3.2)
-3. **Tags** (optional, up to 2) - e.g., "quality", "reliability", "speed", "accuracy", "helpfulness"
+3. **Tags** (optional, up to 2) - e.g., `starred`, `reachable`, `uptime`, `successRate`, `responseTime`, `revenues`, `tradingYield`, or custom tags like "quality", "reliability"
 4. **Text feedback** (optional) - requires IPFS provider for off-chain file
 5. **Endpoint** (optional) - for endpoint-specific feedback
 
@@ -284,6 +291,8 @@ Result: txHash and confirmation that feedback was revoked.
 ## Operation 6: Inspect Agent (Reputation + Connect)
 
 **Triggered by**: "check reputation", "view reputation", "connect to agent", "inspect agent", "how good is agent X".
+
+> **Interpreting reputation**: See [Reputation.md](https://github.com/erc-8004/best-practices/blob/main/Reputation.md) for tag types, the 0-100 scale, and feedback context.
 
 ### Input
 **Agent ID** (required). Resolve chain ID and RPC URL per common pattern. Read-only defaults apply.
@@ -449,6 +458,8 @@ Present as a single card:
 ## Update Agent (sub-flow)
 
 **Triggered by**: "update agent", "edit agent", "change agent name", "add MCP endpoint to my agent".
+
+> **Best practices**: Same as Operation 2 — follow the Four Golden Rules from [Registration.md](https://github.com/erc-8004/best-practices/blob/main/Registration.md) and use [agntcy/oasf](https://github.com/agntcy/oasf) for OASF slugs.
 
 ### Prerequisites
 Standard write prerequisites apply (see above). Additionally: IPFS provider must be configured.
