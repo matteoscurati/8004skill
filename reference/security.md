@@ -48,6 +48,27 @@ All signing operations use WalletConnect v2. The agent **never holds private key
 - **Cloud-synced directories**: if `~/.8004skill/` is inside iCloud Drive, Dropbox, Google Drive, or OneDrive, the WC session file may replicate to cloud. Preflight check warns about this.
 - **WC project ID**: the `WC_PROJECT_ID` is not a secret — it identifies the application to the WalletConnect relay network. A default is provided; users can use their own from cloud.walletconnect.com.
 
+## Managing Secrets Safely
+
+Sensitive variables (`PINATA_JWT`, `FILECOIN_PRIVATE_KEY`) should **never** be hardcoded in shell profiles or committed to source control. Recommended approaches:
+
+- **macOS Keychain** — store the value once, retrieve it at runtime:
+  ```bash
+  security add-generic-password -a "$USER" -s PINATA_JWT -w "<your-jwt>"
+  export PINATA_JWT=$(security find-generic-password -a "$USER" -s PINATA_JWT -w)
+  ```
+- **1Password CLI** — run the script inside an `op run` wrapper so secrets are injected from the vault and never written to disk:
+  ```bash
+  op run --env-file=.env -- npx tsx scripts/register.ts --chain-id 11155111 ...
+  ```
+- **direnv** — create a `.envrc` in the project root (already gitignored via `.env*`), then `direnv allow`:
+  ```bash
+  export PINATA_JWT="..."
+  ```
+- **Rotation** — if a secret is compromised:
+  - `PINATA_JWT`: regenerate from the [Pinata dashboard](https://app.pinata.cloud/developers/api-keys), then update your secret store.
+  - `FILECOIN_PRIVATE_KEY`: generate a new key via your Filecoin wallet provider and update the stored value.
+
 ## Environment Variables Reference
 
 | Variable | Required For | Description |
