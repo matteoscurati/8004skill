@@ -18,6 +18,7 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   extractIpfsConfig,
+  validateIpfsEnv,
   exitWithError,
   loadWalletProvider,
   handleError,
@@ -52,7 +53,9 @@ async function main() {
 
   const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
-  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = extractIpfsConfig(args);
+  const ipfsConfig = extractIpfsConfig(args);
+  validateIpfsEnv(ipfsConfig);
+  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = ipfsConfig;
 
   const hasMutation = MUTATION_FLAGS.some((f) => args[f] !== undefined);
   if (!hasMutation) {

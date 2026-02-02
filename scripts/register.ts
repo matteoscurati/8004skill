@@ -19,6 +19,7 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   extractIpfsConfig,
+  validateIpfsEnv,
   exitWithError,
   loadWalletProvider,
   handleError,
@@ -34,7 +35,9 @@ async function main() {
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
   const name = requireArg(args, 'name', 'agent name');
   const description = requireArg(args, 'description', 'agent description');
-  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = extractIpfsConfig(args);
+  const ipfsConfig = extractIpfsConfig(args);
+  validateIpfsEnv(ipfsConfig);
+  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = ipfsConfig;
   const mcpEndpoint = args['mcp-endpoint'];
   const a2aEndpoint = args['a2a-endpoint'];
   const active = args['active'] !== 'false';
