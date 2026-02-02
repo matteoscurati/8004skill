@@ -128,6 +128,7 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
 ### Error Handling
 - If config directory can't be created, warn and continue (in-memory for session).
 - If no WalletConnect session is active, inform the user they'll need to pair a wallet for write operations. Run `wc-pair.ts`.
+- "Project not found": The WalletConnect project ID is invalid or revoked. Ask the user to verify their project ID at [cloud.walletconnect.com](https://cloud.walletconnect.com) and update it via the Configure operation or `WC_PROJECT_ID` env var.
 
 ---
 

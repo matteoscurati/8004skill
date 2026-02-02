@@ -135,9 +135,31 @@ export async function initWalletConnectProvider(opts: {
   // If no active session, trigger pairing and show QR in terminal
   if (!provider.session) {
     await new Promise<void>((resolve, reject) => {
+      let settled = false;
+
+      function done(outcome: () => void): void {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        outcome();
+      }
+
       const timeout = setTimeout(() => {
-        reject(new Error('WalletConnect pairing timed out (120s). Run wc-pair.ts to pair again.'));
+        done(() => reject(new Error('WalletConnect pairing timed out (120s). Run wc-pair.ts to pair again.')));
       }, 120_000);
+
+      // Fail fast on fatal relay errors (typed Event union omits 'error')
+      const emitter = provider as unknown as NodeJS.EventEmitter;
+      emitter.on('error', (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('Project not found')) {
+          done(() => reject(new Error(
+            'WalletConnect project ID not found. ' +
+            'Set WC_PROJECT_ID env var or configure it via the Configure operation. ' +
+            'Get a free project ID at https://cloud.walletconnect.com',
+          )));
+        }
+      });
 
       provider.on('display_uri', (uri: string) => {
         console.error(JSON.stringify({ status: 'pairing', message: 'Scan QR code with your wallet app' }));
@@ -147,11 +169,9 @@ export async function initWalletConnectProvider(opts: {
       });
 
       provider.connect().then(() => {
-        clearTimeout(timeout);
-        resolve();
+        done(() => resolve());
       }).catch((err: unknown) => {
-        clearTimeout(timeout);
-        reject(err);
+        done(() => reject(err));
       });
     });
   } else {
