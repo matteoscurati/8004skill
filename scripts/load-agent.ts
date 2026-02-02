@@ -15,6 +15,8 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   handleError,
+  outputJson,
+  tryCatch,
 } from './lib/shared.js';
 
 async function main() {
@@ -28,14 +30,8 @@ async function main() {
   const agent = await sdk.loadAgent(agentId);
   const regFile = agent.getRegistrationFile();
 
-  let walletAddress: string | undefined;
-  let walletError: string | undefined;
-  try {
-    walletAddress = await agent.getWallet();
-  } catch (err) {
-    walletError = err instanceof Error ? err.message : String(err);
-    walletAddress = agent.walletAddress;
-  }
+  const walletResult = await tryCatch(() => agent.getWallet());
+  const walletAddress = walletResult.value || agent.walletAddress;
 
   const result: Record<string, unknown> = {
     agentId: agent.agentId,
@@ -60,9 +56,9 @@ async function main() {
     metadata: regFile.metadata,
   };
 
-  if (walletError) result.walletError = walletError;
+  if (walletResult.error) result.walletError = walletResult.error;
 
-  console.log(JSON.stringify(result, null, 2));
+  outputJson(result);
 }
 
 main().catch(handleError);

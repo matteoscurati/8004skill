@@ -15,6 +15,8 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   handleError,
+  outputJson,
+  tryCatch,
 } from './lib/shared.js';
 
 async function main() {
@@ -29,21 +31,8 @@ async function main() {
   const agent = await sdk.loadAgent(agentId);
   const regFile = agent.getRegistrationFile();
 
-  let reputation = { count: 0, averageValue: 0 };
-  let reputationError: string | undefined;
-  try {
-    reputation = await sdk.getReputationSummary(agentId);
-  } catch (err) {
-    reputationError = err instanceof Error ? err.message : String(err);
-  }
-
-  let onChainWallet: string | undefined;
-  let walletError: string | undefined;
-  try {
-    onChainWallet = await agent.getWallet();
-  } catch (err) {
-    walletError = err instanceof Error ? err.message : String(err);
-  }
+  const repResult = await tryCatch(() => sdk.getReputationSummary(agentId));
+  const walletResult = await tryCatch(() => agent.getWallet());
 
   const result: Record<string, unknown> = {
     agentId: agent.agentId,
@@ -63,17 +52,17 @@ async function main() {
     a2aSkills: agent.a2aSkills || [],
 
     trustModels: regFile.trustModels,
-    reputation,
-    walletAddress: onChainWallet || agent.walletAddress,
+    reputation: repResult.value ?? { count: 0, averageValue: 0 },
+    walletAddress: walletResult.value || agent.walletAddress,
 
     owners: regFile.owners,
     endpoints: regFile.endpoints,
   };
 
-  if (reputationError) result.reputationError = reputationError;
-  if (walletError) result.walletError = walletError;
+  if (repResult.error) result.reputationError = repResult.error;
+  if (walletResult.error) result.walletError = walletResult.error;
 
-  console.log(JSON.stringify(result, null, 2));
+  outputJson(result);
 }
 
 main().catch(handleError);

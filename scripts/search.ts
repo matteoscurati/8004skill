@@ -17,6 +17,7 @@ import {
   fetchWithRetry,
   exitWithError,
   handleError,
+  outputJson,
 } from './lib/shared.js';
 
 const DEFAULT_SEARCH_URL = 'https://agent0-semantic-search.dawid-pisarczyk.workers.dev/api/v1/search';
@@ -98,18 +99,12 @@ async function main() {
   const args = parseArgs();
 
   if (args['query']) {
-    const chainIdRaw = args['chain-id'];
-    let chainId: number | undefined;
-    if (chainIdRaw) {
-      chainId = parseInt(chainIdRaw, 10);
-      if (Number.isNaN(chainId)) exitWithError(`Invalid --chain-id: "${chainIdRaw}". Must be a number.`);
-    }
+    const chainId = args['chain-id'] ? parseChainId(args['chain-id']) : undefined;
 
-    const limitRaw = args['limit'];
     let limit: number | undefined;
-    if (limitRaw) {
-      limit = parseInt(limitRaw, 10);
-      if (Number.isNaN(limit)) exitWithError(`Invalid --limit: "${limitRaw}". Must be a number.`);
+    if (args['limit']) {
+      limit = parseInt(args['limit'], 10);
+      if (Number.isNaN(limit)) exitWithError(`Invalid --limit: "${args['limit']}". Must be a number.`);
     }
 
     const result = await semanticSearch(args['query'], {
@@ -118,10 +113,9 @@ async function main() {
       a2aOnly: args['a2a-only'] === 'true',
       limit,
     });
-    console.log(JSON.stringify(result, null, 2));
+    outputJson(result);
   } else {
-    const result = await subgraphSearch(args);
-    console.log(JSON.stringify(result, null, 2));
+    outputJson(await subgraphSearch(args));
   }
 }
 

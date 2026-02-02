@@ -1,9 +1,10 @@
 #!/usr/bin/env npx tsx
 /**
  * Update an existing agent's registration file.
+ * Signing is done via WalletConnect (user's wallet app).
  *
  * Usage:
- *   PRIVATE_KEY="0x..." npx tsx update-agent.ts --agent-id 11155111:42 --chain-id 11155111 \
+ *   npx tsx update-agent.ts --agent-id 11155111:42 --chain-id 11155111 \
  *     --rpc-url https://rpc.sepolia.org --ipfs pinata --pinata-jwt "..." --name "NewName"
  */
 
@@ -16,10 +17,12 @@ import {
   validateAgentId,
   buildSdkConfig,
   getOverridesFromEnv,
+  extractIpfsConfig,
   exitWithError,
-  loadPrivateKey,
+  loadWalletProvider,
   handleError,
-  initSecurityHardening,
+  outputJson,
+  submitAndWait,
 } from './lib/shared.js';
 
 const MUTATION_FLAGS = [
@@ -41,19 +44,14 @@ const MUTATION_FLAGS = [
 ] as const;
 
 async function main() {
-  initSecurityHardening();
   const args = parseArgs();
-  const privateKey = loadPrivateKey();
 
   const agentId = requireArg(args, 'agent-id', 'agent to update');
   validateAgentId(agentId);
 
   const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
-  const ipfsProvider = args['ipfs'];
-  const pinataJwt = args['pinata-jwt'] || process.env.PINATA_JWT;
-  const filecoinPrivateKey = process.env.FILECOIN_PRIVATE_KEY;
-  const ipfsNodeUrl = args['ipfs-node-url'] || process.env.IPFS_NODE_URL;
+  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = extractIpfsConfig(args);
 
   const hasMutation = MUTATION_FLAGS.some((f) => args[f] !== undefined);
   if (!hasMutation) {
@@ -62,11 +60,13 @@ async function main() {
     );
   }
 
+  const walletProvider = await loadWalletProvider(chainId);
+
   const sdk = new SDK(
     buildSdkConfig({
       chainId,
       rpcUrl,
-      privateKey,
+      walletProvider,
       ipfsProvider,
       pinataJwt,
       filecoinPrivateKey,
@@ -133,41 +133,23 @@ async function main() {
     for (const key of splitCsv(args['del-metadata'])) agent.delMetadata(key);
   }
 
-  if (ipfsProvider) {
-    const handle = await agent.registerIPFS();
-    console.error(JSON.stringify({ status: 'submitted', txHash: handle.hash }));
-    const { result: regFile } = await handle.waitMined({ timeoutMs: 120_000 });
-    console.log(
-      JSON.stringify(
-        {
-          agentId: regFile.agentId,
-          txHash: handle.hash,
-          uri: regFile.agentURI,
-          updated: true,
-        },
-        null,
-        2,
-      ),
-    );
-  } else if (args['http-uri']) {
-    const handle = await agent.registerHTTP(args['http-uri']);
-    console.error(JSON.stringify({ status: 'submitted', txHash: handle.hash }));
-    const { result: regFile } = await handle.waitMined({ timeoutMs: 120_000 });
-    console.log(
-      JSON.stringify(
-        {
-          agentId: regFile.agentId,
-          txHash: handle.hash,
-          uri: args['http-uri'],
-          updated: true,
-        },
-        null,
-        2,
-      ),
-    );
-  } else {
-    exitWithError('--ipfs or --http-uri is required to re-publish updated agent');
-  }
+  console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to approve the transaction...' }));
+
+  const httpUri = args['http-uri'];
+  const handle = ipfsProvider
+    ? await agent.registerIPFS()
+    : httpUri
+      ? await agent.registerHTTP(httpUri)
+      : exitWithError('--ipfs or --http-uri is required to re-publish updated agent');
+
+  const { result: regFile, txHash } = await submitAndWait(handle);
+
+  outputJson({
+    agentId: regFile.agentId,
+    txHash,
+    uri: httpUri || regFile.agentURI,
+    updated: true,
+  });
 }
 
 main().catch(handleError);

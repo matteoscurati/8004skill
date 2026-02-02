@@ -15,6 +15,8 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   handleError,
+  outputJson,
+  tryCatch,
 } from './lib/shared.js';
 
 async function main() {
@@ -26,31 +28,18 @@ async function main() {
 
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
 
-  let reputation = { count: 0, averageValue: 0 };
-  let reputationError: string | undefined;
-  try {
-    reputation = await sdk.getReputationSummary(agentId);
-  } catch (err) {
-    reputationError = err instanceof Error ? err.message : String(err);
-  }
-
-  let recentFeedback: unknown[] = [];
-  let feedbackError: string | undefined;
-  try {
-    recentFeedback = await sdk.searchFeedback({ agentId });
-  } catch (err) {
-    feedbackError = err instanceof Error ? err.message : String(err);
-  }
+  const repResult = await tryCatch(() => sdk.getReputationSummary(agentId));
+  const fbResult = await tryCatch(() => sdk.searchFeedback({ agentId }));
 
   const result: Record<string, unknown> = {
-    reputation,
-    recentFeedback,
+    reputation: repResult.value ?? { count: 0, averageValue: 0 },
+    recentFeedback: fbResult.value ?? [],
   };
 
-  if (reputationError) result.reputationError = reputationError;
-  if (feedbackError) result.feedbackError = feedbackError;
+  if (repResult.error) result.reputationError = repResult.error;
+  if (fbResult.error) result.feedbackError = fbResult.error;
 
-  console.log(JSON.stringify(result, null, 2));
+  outputJson(result);
 }
 
 main().catch(handleError);

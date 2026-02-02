@@ -1,12 +1,13 @@
 #!/usr/bin/env npx tsx
 /**
  * Give or revoke feedback to an agent on-chain.
+ * Signing is done via WalletConnect (user's wallet app).
  *
  * Usage:
- *   PRIVATE_KEY="0x..." npx tsx feedback.ts --agent-id 11155111:42 --chain-id 11155111 \
+ *   npx tsx feedback.ts --agent-id 11155111:42 --chain-id 11155111 \
  *     --rpc-url https://rpc.sepolia.org --value 85 --tag1 quality --text "Great agent"
  *
- *   PRIVATE_KEY="0x..." npx tsx feedback.ts --action revoke --agent-id 11155111:42 \
+ *   npx tsx feedback.ts --action revoke --agent-id 11155111:42 \
  *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org --feedback-index 0
  */
 
@@ -20,16 +21,16 @@ import {
   validateAgentId,
   buildSdkConfig,
   getOverridesFromEnv,
+  extractIpfsConfig,
   exitWithError,
-  loadPrivateKey,
+  loadWalletProvider,
   handleError,
-  initSecurityHardening,
+  outputJson,
+  submitAndWait,
 } from './lib/shared.js';
 
 async function main() {
-  initSecurityHardening();
   const args = parseArgs();
-  const privateKey = loadPrivateKey();
 
   const agentId = requireArg(args, 'agent-id', 'target agent');
   validateAgentId(agentId);
@@ -38,16 +39,15 @@ async function main() {
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
   const action = args['action'] || 'give';
 
-  const ipfsProvider = args['ipfs'];
-  const pinataJwt = args['pinata-jwt'] || process.env.PINATA_JWT;
-  const filecoinPrivateKey = process.env.FILECOIN_PRIVATE_KEY;
-  const ipfsNodeUrl = args['ipfs-node-url'] || process.env.IPFS_NODE_URL;
+  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = extractIpfsConfig(args);
+
+  const walletProvider = await loadWalletProvider(chainId);
 
   const sdk = new SDK(
     buildSdkConfig({
       chainId,
       rpcUrl,
-      privateKey,
+      walletProvider,
       ipfsProvider,
       pinataJwt,
       filecoinPrivateKey,
@@ -56,29 +56,23 @@ async function main() {
     }),
   );
 
+  console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to approve the transaction...' }));
+
   if (action === 'revoke') {
     const feedbackIndexRaw = requireArg(args, 'feedback-index', 'feedback index to revoke');
     const feedbackIndex = parseInt(feedbackIndexRaw, 10);
-    if (Number.isNaN(feedbackIndex) || feedbackIndex < 0 || feedbackIndex.toString() !== feedbackIndexRaw) {
+    if (Number.isNaN(feedbackIndex) || feedbackIndex < 0) {
       exitWithError('--feedback-index must be a non-negative integer');
     }
 
-    const handle = await sdk.revokeFeedback(agentId, feedbackIndex);
-    console.error(JSON.stringify({ status: 'submitted', txHash: handle.hash }));
-    const { result: feedback } = await handle.waitMined({ timeoutMs: 120_000 });
+    const { result: feedback, txHash } = await submitAndWait(await sdk.revokeFeedback(agentId, feedbackIndex));
 
-    console.log(
-      JSON.stringify(
-        {
-          agentId: feedback.agentId,
-          txHash: feedback.txHash || handle.hash,
-          feedbackIndex,
-          action: 'revoke',
-        },
-        null,
-        2,
-      ),
-    );
+    outputJson({
+      agentId: feedback.agentId,
+      txHash: feedback.txHash || txHash,
+      feedbackIndex,
+      action: 'revoke',
+    });
     return;
   }
 
@@ -107,24 +101,17 @@ async function main() {
   }
 
   // Pass the raw string to the SDK — it handles encoding (value + valueDecimals)
-  const handle = await sdk.giveFeedback(agentId, valueRaw, tag1, tag2, endpoint, feedbackFile);
-
-  console.error(JSON.stringify({ status: 'submitted', txHash: handle.hash }));
-  const { result: feedback } = await handle.waitMined({ timeoutMs: 120_000 });
-
-  console.log(
-    JSON.stringify(
-      {
-        agentId: feedback.agentId,
-        txHash: feedback.txHash || handle.hash,
-        value: feedback.value,
-        tags: feedback.tags,
-        reviewer: feedback.reviewer,
-      },
-      null,
-      2,
-    ),
+  const { result: feedback, txHash } = await submitAndWait(
+    await sdk.giveFeedback(agentId, valueRaw, tag1, tag2, endpoint, feedbackFile),
   );
+
+  outputJson({
+    agentId: feedback.agentId,
+    txHash: feedback.txHash || txHash,
+    value: feedback.value,
+    tags: feedback.tags,
+    reviewer: feedback.reviewer,
+  });
 }
 
 main().catch(handleError);

@@ -15,7 +15,7 @@ You are an AI agent interacting with the ERC-8004 protocol for on-chain agent id
 Global agent ID format: `eip155:{chainId}:{identityRegistryAddress}:{tokenId}` (short form: `{chainId}:{tokenId}`)
 
 Reference files (read as needed):
-- `{baseDir}/reference/security.md` — security rules, private key threat model, env var reference (read before any write operation)
+- `{baseDir}/reference/security.md` — security rules, WalletConnect security model, env var reference (read before any write operation)
 - `{baseDir}/reference/chains.md` — supported chains, contract addresses, RPC endpoints
 - `{baseDir}/reference/sdk-api.md` — agent0-sdk API surface
 - `{baseDir}/reference/agent-schema.md` — ERC-8004 data structures
@@ -36,8 +36,8 @@ Before executing any operation, verify the project is ready:
 
 When the user asks about ERC-8004, agent registration, agent discovery, or anything related to this skill, present this menu:
 
-| # | Operation | Type | Requires PRIVATE_KEY |
-|---|-----------|------|---------------------|
+| # | Operation | Type | Requires WalletConnect |
+|---|-----------|------|----------------------|
 | 1 | Configure | Setup | No |
 | 2 | Register Agent | Write | Yes |
 | 3 | Load Agent | Read | No |
@@ -52,19 +52,17 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 
 **Write prerequisites** — all write operations (Register, Update, Feedback, Wallet set/unset, Verify sign) require:
 1. Config loaded from `~/.8004skill/config.json` (run Configure if missing)
-2. Preflight check via `check-env.ts` to confirm signer address
-3. Explicit `--chain-id` (no default fallback for writes)
-4. User confirmation before submitting the transaction
+2. Active WalletConnect session (run `wc-pair.ts` if no session)
+3. Preflight check via `check-env.ts` to confirm connected wallet address
+4. Explicit `--chain-id` (no default fallback for writes)
+5. User confirmation before submitting the transaction
 
-**Env var security** — `PRIVATE_KEY`, `KEYSTORE_PASSWORD`, and `WALLET_PRIVATE_KEY` must be set in the environment before invoking the skill (e.g., via shell `export`, `.env` file, or OpenClaw skill config `env` field). **Never** pass them as inline command prefixes (`VAR=value npx tsx ...`) because command strings may appear in process logs, session history, and exec approval UIs.
-
-**Keystore CLI** — `keystore.ts` is an interactive CLI for direct user use only. Claude must **never** invoke `keystore.ts`. If the user needs to manage keystore entries, instruct them to run the command themselves in their terminal.
+**WalletConnect signing** — all write operations use WalletConnect v2 to sign transactions. The agent never holds private keys — signing happens in the user's wallet app (MetaMask, Rainbow, etc.). The user will receive a push notification or pop-up in their wallet app to review and approve each transaction.
 
 **Secret handling (mandatory):**
 - **NEVER** ask, accept, or prompt the user to type/paste a private key, mnemonic, seed phrase, or password in the chat. Refuse immediately if offered — chat history is stored and secrets would be permanently exposed.
 - **NEVER** display or echo a private key or password in any response.
 - If a user accidentally pastes a secret, warn them immediately that it is now in the session history and should be considered compromised. Instruct them to rotate the key.
-- In **OpenClaw** environments: all secrets must be pre-configured via the skill config `env` field. If secrets are missing and a write operation is requested, instruct the user to exit, configure secrets in the skill settings, and start a new session. Never suggest workarounds.
 
 **Read-only defaults** — when no config exists, default to chain `11155111` and RPC `https://rpc.sepolia.org`. If the agent ID contains a chain prefix (e.g., `1:42`), derive chain ID from it and look up the RPC from `{baseDir}/reference/chains.md`.
 
@@ -110,19 +108,21 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
    - `node` - needs `IPFS_NODE_URL` env var
    - none (skip if user doesn't plan to register)
 
-5. **Save config** to `~/.8004skill/config.json` with chmod 600:
+5. **Ask about WalletConnect project ID** (optional). The skill ships with a default project ID, but users can provide their own from [cloud.walletconnect.com](https://cloud.walletconnect.com) (free). Can be set via `WC_PROJECT_ID` env var or stored in config.
+
+6. **Save config** to `~/.8004skill/config.json` with chmod 600:
    ```json
-   { "activeChain": <chainId>, "rpcUrl": "<rpcUrl>", "ipfs": "<provider or null>", "registrations": {} }
+   { "activeChain": <chainId>, "rpcUrl": "<rpcUrl>", "ipfs": "<provider or null>", "wcProjectId": "<projectId or omit for default>", "registrations": {} }
    ```
 
-6. **Ask about encrypted keystore** (optional, recommended). Explain that the AES-256-GCM keystore avoids shell history exposure. If interested, instruct the user to run: `npx tsx {baseDir}/scripts/keystore.ts --action import`. After import, write operations only need `KEYSTORE_PASSWORD` instead of `PRIVATE_KEY`.
+7. **Pair wallet** (recommended for write operations). Run: `npx tsx {baseDir}/scripts/wc-pair.ts --chain-id <chainId>`. A QR code will appear in the terminal — the user scans it with their wallet app (MetaMask, Rainbow, etc.) to establish a session. Sessions last ~7 days.
 
-7. **Run preflight check**: `npx tsx {baseDir}/scripts/check-env.ts`
-   Show: signer address, keystore status, configured env vars, any warnings.
+8. **Run preflight check**: `npx tsx {baseDir}/scripts/check-env.ts`
+   Show: WalletConnect session status, connected address, configured env vars, any warnings.
 
 ### Error Handling
 - If config directory can't be created, warn and continue (in-memory for session).
-- If neither PRIVATE_KEY nor keystore is configured, inform the user they'll need one for write operations. Suggest the encrypted keystore.
+- If no WalletConnect session is active, inform the user they'll need to pair a wallet for write operations. Run `wc-pair.ts`.
 
 ---
 
@@ -169,7 +169,8 @@ Show: agentId (`{chainId}:{tokenId}`), txHash (link to block explorer), metadata
 
 ### Error Handling
 - "insufficient funds": Need native token for gas. Suggest faucets for testnets.
-- "PRIVATE_KEY environment variable is required": Tell user to set `PRIVATE_KEY`.
+- "No connected account": WalletConnect session not active. Run `wc-pair.ts` to connect.
+- "User rejected": User declined the transaction in their wallet app.
 - IPFS errors: Check corresponding env var is set and valid.
 - Timeout (120s): Transaction submitted but mining slow. Provide txHash for manual check.
 
@@ -318,8 +319,7 @@ If MCP endpoint exists, show endpoint URL, tools list, and MCP config snippet (`
 1. Load config. For `get`: Read-only defaults apply.
 2. For `set`/`unset`: standard write prerequisites apply (see above).
 3. For `set`, wallet signature flow:
-   - **One-wallet flow**: wallet = signer → no `WALLET_PRIVATE_KEY` needed
-   - **Two-wallet flow**: wallet ≠ signer → `WALLET_PRIVATE_KEY` env var required
+   - **Standard flow**: signing via WalletConnect
    - **Pre-signed flow**: `--signature` flag with pre-generated EIP-712 signature
 
 ### Input
@@ -353,7 +353,8 @@ npx tsx {baseDir}/scripts/wallet.ts \
 - **Unset**: "Wallet unset. Transaction: {txHash}"
 
 ### Error Handling
-- "WALLET_PRIVATE_KEY" not set: Required only for two-wallet flow. Not needed for one-wallet or pre-signed flow.
+- "No connected account": WalletConnect session not active. Run `wc-pair.ts` to connect.
+- "User rejected": User declined the transaction in their wallet app.
 - "Wallet already set to this address": No transaction needed.
 - Ownership errors: Only the agent owner can set/unset the wallet.
 
@@ -366,7 +367,7 @@ npx tsx {baseDir}/scripts/wallet.ts \
 Uses the ERC-8004 identity verification pattern: look up the agent's on-chain wallet, sign or verify a message against it.
 
 ### Prerequisites
-- **Sign**: write prerequisites apply. **Verify**: read-only. Read-only defaults apply.
+- **Sign**: write prerequisites apply (WalletConnect session required). **Verify**: read-only. Read-only defaults apply.
 - Resolve chain ID and RPC URL per common pattern.
 
 ### Sign (prove own identity)
@@ -426,7 +427,7 @@ Run sequentially:
 2. `reputation.ts`
 3. `wallet.ts --action get`
 
-If `PRIVATE_KEY` or keystore is available, also run:
+If a WalletConnect session is active, also run:
 4. `verify.ts --action sign`
 
 ### Result
@@ -438,7 +439,7 @@ Present as a single card:
 - **Wallet**: {address} or "not set"
 - **Owners**: {owners}
 - **Endpoints**: MCP yes/no, A2A yes/no
-- **Identity Proof**: if signed, "Verified (wallet match: {walletMatch})"; otherwise "Not signed (set PRIVATE_KEY to prove ownership)"
+- **Identity Proof**: if signed, "Verified (wallet match: {walletMatch})"; otherwise "Not signed (connect wallet via wc-pair.ts to prove ownership)"
 
 ### Error Handling
 - Agent not found: Check agent ID and chain.

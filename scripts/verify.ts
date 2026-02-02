@@ -2,10 +2,11 @@
 /**
  * Agent identity verification: sign messages and verify signatures
  * against ERC-8004 registered wallets.
+ * Signing is done via WalletConnect (user's wallet app).
  *
  * Usage:
- *   # Sign (prove identity) — requires private key
- *   PRIVATE_KEY="0x..." npx tsx verify.ts --action sign --agent-id 11155111:42 \
+ *   # Sign (prove identity) — requires WalletConnect session
+ *   npx tsx verify.ts --action sign --agent-id 11155111:42 \
  *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org [--message "custom message"]
  *
  *   # Verify (check identity) — read-only
@@ -16,7 +17,6 @@
 
 import { randomBytes } from 'node:crypto';
 import { verifyMessage } from 'viem';
-import { privateKeyToAddress, signMessage } from 'viem/accounts';
 import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
@@ -28,10 +28,12 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   exitWithError,
-  loadPrivateKey,
+  loadWalletProvider,
   handleError,
-  initSecurityHardening,
+  outputJson,
+  tryCatch,
 } from './lib/shared.js';
+import { getConnectedAddress } from './lib/walletconnect.js';
 
 // ── Structured challenge format ─────────────────────────────────────
 
@@ -66,35 +68,32 @@ async function main() {
 
   if (action === 'sign') {
     const chainId = requireChainId(args['chain-id']);
-    initSecurityHardening();
-    const privateKey = loadPrivateKey();
-    const signerAddress = privateKeyToAddress(privateKey as `0x${string}`);
+    const walletProvider = await loadWalletProvider(chainId);
+    const signerAddress = getConnectedAddress(walletProvider);
 
-    const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, privateKey, ...getOverridesFromEnv(chainId) }));
+    const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, walletProvider, ...getOverridesFromEnv(chainId) }));
     const agent = await sdk.loadAgent(agentId);
     const onChainWallet = await agent.getWallet();
 
     const message = args['message'] || buildChallenge(agentId);
-    const signature = await signMessage({
-      message,
-      privateKey: privateKey as `0x${string}`,
+
+    console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to sign the message...' }));
+
+    // Sign via WalletConnect (personal_sign)
+    const signature = await walletProvider.request<string>({
+      method: 'personal_sign',
+      params: [`0x${Buffer.from(message).toString('hex')}`, signerAddress],
     });
 
-    console.log(
-      JSON.stringify(
-        {
-          action: 'sign',
-          agentId,
-          message,
-          signature,
-          signerAddress,
-          onChainWallet: onChainWallet || null,
-          walletMatch: onChainWallet ? signerAddress.toLowerCase() === onChainWallet.toLowerCase() : false,
-        },
-        null,
-        2,
-      ),
-    );
+    outputJson({
+      action: 'sign',
+      agentId,
+      message,
+      signature,
+      signerAddress,
+      onChainWallet: onChainWallet || null,
+      walletMatch: onChainWallet ? signerAddress.toLowerCase() === onChainWallet.toLowerCase() : false,
+    });
   } else if (action === 'verify') {
     const chainId = parseChainId(args['chain-id']);
     const signature = requireArg(args, 'signature', 'signature to verify');
@@ -129,30 +128,22 @@ async function main() {
     }
 
     // Reputation lookup is non-fatal
-    let reputation: { count: number; averageValue: number } | null = null;
-    try {
-      const rep = await sdk.getReputationSummary(agentId);
-      reputation = { count: rep.count, averageValue: rep.averageValue };
-    } catch {
-      warnings.push('reputation_unavailable');
-    }
+    const repResult = await tryCatch(() => sdk.getReputationSummary(agentId));
+    const reputation = repResult.value
+      ? { count: repResult.value.count, averageValue: repResult.value.averageValue }
+      : null;
+    if (repResult.error) warnings.push('reputation_unavailable');
 
-    console.log(
-      JSON.stringify(
-        {
-          action: 'verify',
-          agentId,
-          verified,
-          message,
-          onChainWallet,
-          active,
-          reputation,
-          warnings,
-        },
-        null,
-        2,
-      ),
-    );
+    outputJson({
+      action: 'verify',
+      agentId,
+      verified,
+      message,
+      onChainWallet,
+      active,
+      reputation,
+      warnings,
+    });
   } else {
     exitWithError(`Unknown action: ${action}. Use sign or verify.`);
   }

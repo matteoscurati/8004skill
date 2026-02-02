@@ -8,9 +8,9 @@ import { SDK } from 'agent0-sdk';
 const sdk = new SDK({
   chainId: number,           // Required: EVM chain ID
   rpcUrl: string,            // Required: RPC endpoint
-  privateKey?: string,       // Hex private key for write ops
-  signer?: string,           // Alias for privateKey
-  walletProvider?: EIP1193,  // Browser wallet (EIP-1193)
+  walletProvider?: EIP1193,  // EIP-1193 provider (used by this skill via WalletConnect)
+  privateKey?: string,       // Hex private key (not used by this skill)
+  signer?: string,           // Alias for privateKey (not used by this skill)
   ipfs?: 'pinata' | 'filecoinPin' | 'node',
   pinataJwt?: string,        // Required if ipfs='pinata'
   filecoinPrivateKey?: string, // Required if ipfs='filecoinPin'
@@ -91,6 +91,7 @@ agent.updateInfo(name?, description?, image?): this
 // Wallet (on-chain)
 agent.setWallet(newWallet, opts?): Promise<TransactionHandle<RegistrationFile> | undefined>
   // opts: { deadline?: number, newWalletPrivateKey?: string, signature?: string | Uint8Array }
+  // This skill uses the signature option or lets the SDK handle signing via walletProvider.
   // Returns undefined when wallet is already set to the target address
 agent.unsetWallet(): Promise<TransactionHandle<RegistrationFile> | undefined>
   // Returns undefined when wallet is already unset

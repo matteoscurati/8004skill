@@ -14,23 +14,7 @@
 
 ### Install
 
-**Automated (recommended):**
-
-```bash
-git clone https://github.com/matteoscurati/8004skill.git
-cd 8004skill
-./install.sh    # select "Claude Code" or "Both"
-```
-
-**Manual:**
-
-```bash
-git clone https://github.com/matteoscurati/8004skill.git
-cd 8004skill
-npm install
-mkdir -p ~/.claude/skills
-ln -s "$(pwd)" ~/.claude/skills/8004skill
-```
+See [README.md](../README.md#installation) for installation steps (automated and manual).
 
 ### How it works
 
@@ -54,17 +38,12 @@ Claude Code reads `SKILL.md` from the skills directory at startup. The skill is 
 Claude Code inherits the shell environment. Export variables before launching:
 
 ```bash
-export PRIVATE_KEY=0xYourHexPrivateKey
-export PINATA_JWT=your_pinata_jwt
+export PINATA_JWT=your_pinata_jwt    # only if using Pinata for IPFS
+export WC_PROJECT_ID=your_project_id  # optional, a default is provided
 claude
 ```
 
-Or use the encrypted keystore to avoid shell history exposure. With the keystore, only `KEYSTORE_PASSWORD` is needed:
-
-```bash
-export KEYSTORE_PASSWORD=your_password
-claude
-```
+Write operations use WalletConnect v2 — no private keys in the environment. The agent will pair your wallet via QR code during configuration.
 
 ### Session workflow
 
@@ -81,23 +60,7 @@ claude
 
 ### Install
 
-**Automated (recommended):**
-
-```bash
-git clone https://github.com/matteoscurati/8004skill.git
-cd 8004skill
-./install.sh    # select "OpenClaw" or "Both"
-```
-
-**Manual:**
-
-```bash
-git clone https://github.com/matteoscurati/8004skill.git
-cd 8004skill
-npm install
-mkdir -p ~/.openclaw/skills
-ln -s "$(pwd)" ~/.openclaw/skills/8004skill
-```
+See [README.md](../README.md#installation) for installation steps (automated and manual).
 
 ### How it works
 
@@ -138,73 +101,17 @@ Set variables in your shell profile (`~/.zshrc`, `~/.bashrc`) or in OpenClaw's e
 
 ```bash
 # In ~/.zshrc or ~/.bashrc
-export PRIVATE_KEY=0xYourHexPrivateKey
-export PINATA_JWT=your_pinata_jwt
+export PINATA_JWT=your_pinata_jwt    # only if using Pinata for IPFS
+export WC_PROJECT_ID=your_project_id  # optional, a default is provided
 ```
 
-Or use the encrypted keystore (see [Common Workflows](#encrypted-keystore) below).
+Write operations use WalletConnect v2 — no private keys needed. The agent will pair your wallet during configuration.
 
 ---
 
 ## Other SKILL.md-Compatible Agents
 
-8004skill follows the [Agent Skills](https://agentskills.io) convention. Any agent that reads SKILL.md files can use it.
-
-### Requirements for compatibility
-
-An agent must:
-
-1. **Read SKILL.md** from a known skills directory or a provided path
-2. **Parse the frontmatter** (YAML between `---` delimiters) for metadata
-3. **Follow the wizard flows** defined in the body -- gather inputs conversationally, run scripts via `npx tsx`, and present JSON output
-4. **Execute shell commands** as subprocesses
-5. **Pass environment variables** to subprocesses (PRIVATE_KEY, PINATA_JWT, etc.)
-
-### Generic installation
-
-```bash
-git clone https://github.com/matteoscurati/8004skill.git
-cd 8004skill
-npm install
-```
-
-Then point your agent to the SKILL.md file:
-
-| Agent setup style | What to do |
-|---|---|
-| **Skills directory** (like Claude Code, OpenClaw) | Symlink the project into the agent's skills directory |
-| **Config file** | Add the path to `SKILL.md` in the agent's configuration |
-| **CLI argument** | Pass `--skill /path/to/8004skill/SKILL.md` (or equivalent) |
-| **Inline context** | Copy SKILL.md contents into the agent's system prompt or context window |
-
-### What the agent needs to handle
-
-The SKILL.md body defines:
-
-- **Auto-Setup** -- check for `node_modules`, run `npm install` if missing
-- **Operations Menu** -- 8 operations plus an Update Agent sub-flow, with trigger phrases, input schemas, CLI templates, and output formatting
-- **Security Rules** -- defined in `reference/security.md` (linked from SKILL.md): never show raw commands, always confirm before writes, never log private keys
-- **Reference Files** -- listed at the top of the SKILL.md body: `reference/chains.md`, `reference/sdk-api.md`, `reference/agent-schema.md`, and `reference/security.md`
-
-### Minimal integration example
-
-If your agent supports shell execution via tool/function calling:
-
-1. Load `SKILL.md` into the agent's context
-2. The agent follows the wizard flows when the user asks about ERC-8004 operations
-3. Scripts run via `npx tsx scripts/<name>.ts --flag value` in the project directory
-4. The agent parses JSON from stdout and formats it for the user
-
-### Script I/O contract
-
-All scripts follow the same protocol:
-
-| Channel | Format | Content |
-|---------|--------|---------|
-| stdout | JSON | Final result (agent parses this) |
-| stderr | Text/JSON | Progress updates and errors |
-| exit 0 | -- | Success |
-| exit 1 | -- | Failure (error written to stderr as JSON) |
+8004skill follows the [Agent Skills](https://agentskills.io) convention. Any agent that reads SKILL.md files can use it. Clone the repo, run `npm install`, then point your agent to the `SKILL.md` file (via skills directory symlink, config path, CLI argument, or inline context). The SKILL.md body defines the operations menu, input schemas, CLI templates, security rules, and I/O contract — see [docs/architecture.md](architecture.md) for the full script I/O protocol.
 
 ---
 
@@ -251,25 +158,18 @@ If results appear as a formatted table, the skill is working.
 3. The agent walks you through chain selection, RPC endpoint, and IPFS provider
 4. Configuration is saved to `~/.8004skill/config.json`
 
-### Encrypted keystore
+### Wallet pairing (WalletConnect)
 
-Avoids exposing `PRIVATE_KEY` in shell history and process listings:
+Write operations require a connected wallet via WalletConnect v2. Private keys never touch the agent — all signing happens in your wallet app.
 
-1. Run: `npx tsx scripts/keystore.ts --action import`
-2. Enter your private key and a password (input is hidden)
-3. The key is stored encrypted (AES-256-GCM) at `~/.8004skill/keystore.json`
-4. For write operations, set `KEYSTORE_PASSWORD` instead of `PRIVATE_KEY`
+1. During configuration, the agent runs `wc-pair.ts` which shows a QR code in the terminal
+2. Scan the QR code with your wallet app (MetaMask, Rainbow, etc.)
+3. The session is saved to `~/.8004skill/wc-storage.json` and reused across script invocations
+4. Sessions last ~7 days. When expired, the agent will show a new QR code automatically
 
-Manage the keystore:
+To disconnect manually, ask the agent or run: `npx tsx scripts/wc-disconnect.ts`
 
-```bash
-npx tsx scripts/keystore.ts --action list      # list stored keys
-npx tsx scripts/keystore.ts --action verify     # verify a stored key
-npx tsx scripts/keystore.ts --action export     # export a key (prompts for password)
-npx tsx scripts/keystore.ts --action delete     # delete a key
-```
-
-### Read operations (no key needed)
+### Read operations (no wallet needed)
 
 - Search for agents
 - Load agent details
@@ -278,9 +178,9 @@ npx tsx scripts/keystore.ts --action delete     # delete a key
 - Get an agent's wallet address
 - Verify another agent's identity signature
 
-### Write operations (key required)
+### Write operations (wallet required)
 
-Require `PRIVATE_KEY` or `KEYSTORE_PASSWORD`:
+Require an active WalletConnect session:
 
 - Register a new agent
 - Update agent metadata

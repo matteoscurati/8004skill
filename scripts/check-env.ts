@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 /**
  * Environment preflight check.
- * Derives wallet address from PRIVATE_KEY and reports which env vars are set.
+ * Reports WalletConnect session status and configured env vars.
  *
  * Usage:
  *   npx tsx check-env.ts
@@ -10,47 +10,8 @@
 import { existsSync, realpathSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { privateKeyToAddress } from 'viem/accounts';
-import { handleError, SCRIPT_VERSION, validateConfig } from './lib/shared.js';
-import {
-  keystoreExists,
-  loadKeystoreFile,
-  listEntries,
-  findEntry,
-  decryptKey,
-  getKeystorePath,
-  type KeystoreFile,
-} from './lib/keystore.js';
-
-interface SignerResult {
-  signerAddress: string | null;
-  privateKeyError: string | null;
-}
-
-const NO_SIGNER: SignerResult = { signerAddress: null, privateKeyError: null };
-
-function deriveAddress(key: string): SignerResult {
-  try {
-    return { signerAddress: privateKeyToAddress(key as `0x${string}`), privateKeyError: null };
-  } catch (err) {
-    return { signerAddress: null, privateKeyError: err instanceof Error ? err.message : String(err) };
-  }
-}
-
-function resolveSignerFromKeystore(ksFile: KeystoreFile): SignerResult {
-  const password = process.env.KEYSTORE_PASSWORD;
-  if (!password) return NO_SIGNER;
-
-  const label = process.env.KEYSTORE_LABEL || 'default';
-  const entry = findEntry(ksFile, label);
-  if (!entry) return NO_SIGNER;
-
-  try {
-    return deriveAddress(decryptKey(entry, password));
-  } catch {
-    return { signerAddress: null, privateKeyError: `Keystore decryption failed for entry "${label}"` };
-  }
-}
+import { handleError, SCRIPT_VERSION, validateConfig, outputJson } from './lib/shared.js';
+import { getSessionInfo, getWcStoragePath } from './lib/walletconnect.js';
 
 // ── Security warnings ──────────────────────────────────────────────
 
@@ -71,12 +32,12 @@ function detectOpenClaw(): string | null {
 }
 
 function detectCloudSync(): string | null {
-  const keystorePath = getKeystorePath();
-  if (!existsSync(keystorePath)) return null;
+  const wcStoragePath = getWcStoragePath();
+  if (!existsSync(wcStoragePath)) return null;
 
   let resolvedPath: string;
   try {
-    resolvedPath = realpathSync(keystorePath);
+    resolvedPath = realpathSync(wcStoragePath);
   } catch {
     return null;
   }
@@ -94,8 +55,8 @@ function detectCloudSync(): string | null {
   if (!isCloudSynced) return null;
 
   return (
-    `Keystore path (${resolvedPath}) appears to be inside a cloud-synced directory. ` +
-    'The encrypted keystore may be replicated to cloud storage. ' +
+    `WalletConnect storage path (${resolvedPath}) appears to be inside a cloud-synced directory. ` +
+    'The WC session file may be replicated to cloud storage. ' +
     'Consider moving ~/.8004skill outside of synced directories.'
   );
 }
@@ -139,25 +100,7 @@ function checkConfigFile(): string[] {
 }
 
 function main(): void {
-  const privateKey = process.env.PRIVATE_KEY;
-  let signer: SignerResult = privateKey ? deriveAddress(privateKey) : NO_SIGNER;
-
-  const ksExists = keystoreExists();
-  let entries: Array<{ label: string; address: string }> = [];
-  let keystoreError: string | null = null;
-
-  if (ksExists) {
-    try {
-      const ksFile = loadKeystoreFile();
-      entries = listEntries(ksFile).map(({ label, address }) => ({ label, address }));
-
-      if (!privateKey) {
-        signer = resolveSignerFromKeystore(ksFile);
-      }
-    } catch (err) {
-      keystoreError = err instanceof Error ? err.message : String(err);
-    }
-  }
+  const wcSession = getSessionInfo();
 
   const warnings = [
     detectOpenClaw(),
@@ -165,23 +108,18 @@ function main(): void {
     ...checkConfigFile(),
   ].filter((w): w is string => w !== null);
 
-  console.log(JSON.stringify({
+  outputJson({
     version: SCRIPT_VERSION,
-    signerAddress: signer.signerAddress,
-    privateKeyError: signer.privateKeyError,
-    keystore: {
-      exists: ksExists,
-      path: getKeystorePath(),
-      entryCount: entries.length,
-      entries,
-      ...(keystoreError && { error: keystoreError }),
+    walletConnect: {
+      sessionActive: wcSession.sessionActive,
+      connectedAddress: wcSession.connectedAddress,
+      chainId: wcSession.chainId,
+      storagePath: getWcStoragePath(),
     },
     envVars: {
-      PRIVATE_KEY: !!privateKey,
-      KEYSTORE_PASSWORD: !!process.env.KEYSTORE_PASSWORD,
+      WC_PROJECT_ID: !!process.env.WC_PROJECT_ID,
       PINATA_JWT: !!process.env.PINATA_JWT,
       FILECOIN_PRIVATE_KEY: !!process.env.FILECOIN_PRIVATE_KEY,
-      WALLET_PRIVATE_KEY: !!process.env.WALLET_PRIVATE_KEY,
       IPFS_NODE_URL: !!process.env.IPFS_NODE_URL,
       SEARCH_API_URL: !!process.env.SEARCH_API_URL,
       SUBGRAPH_URL: !!process.env.SUBGRAPH_URL,
@@ -189,7 +127,7 @@ function main(): void {
       REGISTRY_ADDRESS_REPUTATION: !!process.env.REGISTRY_ADDRESS_REPUTATION,
     },
     ...(warnings.length > 0 && { warnings }),
-  }, null, 2));
+  });
 }
 
 try {

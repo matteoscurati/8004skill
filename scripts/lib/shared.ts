@@ -1,32 +1,10 @@
 import type { SDKConfig } from 'agent0-sdk';
-import { privateKeyToAddress } from 'viem/accounts';
-import { keystoreExists, loadKeystoreFile, findEntry, decryptKey } from './keystore.js';
+import type EthereumProvider from '@walletconnect/ethereum-provider';
+import { initWalletConnectProvider, getConnectedAddress } from './walletconnect.js';
 
 // ── Script version ──────────────────────────────────────────────────
 
-export const SCRIPT_VERSION = '1.1.0';
-
-// ── Security hardening ──────────────────────────────────────────────
-
-const SENSITIVE_ENV_VARS = ['KEYSTORE_PASSWORD', 'PRIVATE_KEY', 'WALLET_PRIVATE_KEY', 'FILECOIN_PRIVATE_KEY'];
-
-function cleanupEnvSecrets(): void {
-  for (const name of SENSITIVE_ENV_VARS) {
-    delete process.env[name];
-  }
-}
-
-/** Call at startup in write scripts to wipe sensitive env vars on interruption. */
-export function initSecurityHardening(): void {
-  delete process.env.CORE_PATTERN;
-
-  function onSignal(): never {
-    cleanupEnvSecrets();
-    process.exit(130);
-  }
-  process.on('SIGINT', onSignal);
-  process.on('SIGTERM', onSignal);
-}
+export const SCRIPT_VERSION = '2.0.0';
 
 // ── CLI argument parsing ────────────────────────────────────────────
 
@@ -66,13 +44,6 @@ export function requireChainId(raw: string | undefined): number {
     );
   }
   return parseChainId(raw);
-}
-
-export function parseIntStrict(raw: string | undefined, name: string): number {
-  if (raw === undefined) exitWithError(`--${name} is required`);
-  const val = parseInt(raw, 10);
-  if (Number.isNaN(val)) exitWithError(`Invalid --${name}: "${raw}". Must be a number.`);
-  return val;
 }
 
 export function parseDecimalInRange(raw: string, name: string, min: number, max: number): number {
@@ -164,7 +135,7 @@ function sleep(ms: number): Promise<void> {
 export function buildSdkConfig(opts: {
   chainId: number;
   rpcUrl: string;
-  privateKey?: string;
+  walletProvider?: EthereumProvider;
   ipfsProvider?: string;
   pinataJwt?: string;
   filecoinPrivateKey?: string;
@@ -173,7 +144,7 @@ export function buildSdkConfig(opts: {
   registryOverrides?: Record<number, Record<string, string>>;
 }): SDKConfig {
   const config: SDKConfig = { chainId: opts.chainId, rpcUrl: opts.rpcUrl };
-  if (opts.privateKey) config.privateKey = opts.privateKey;
+  if (opts.walletProvider) config.walletProvider = opts.walletProvider;
   if (opts.subgraphUrl) config.subgraphUrl = opts.subgraphUrl;
   if (opts.registryOverrides) config.registryOverrides = opts.registryOverrides;
 
@@ -197,6 +168,15 @@ export function buildSdkConfig(opts: {
   }
 
   return config;
+}
+
+// ── WalletConnect provider loader ───────────────────────────────────
+
+export async function loadWalletProvider(chainId: number): Promise<EthereumProvider> {
+  const provider = await initWalletConnectProvider({ chainId });
+  const address = getConnectedAddress(provider);
+  console.error(JSON.stringify({ status: 'wallet_connected', address, chainId: provider.chainId }));
+  return provider;
 }
 
 // ── Environment overrides for non-default chains ────────────────────
@@ -239,7 +219,7 @@ const KNOWN_RPC_URLS: Record<number, string[]> = {
   80002: ['https://rpc-amoy.polygon.technology'],
 };
 
-export interface ConfigWarning {
+interface ConfigWarning {
   field: string;
   message: string;
 }
@@ -273,63 +253,6 @@ export function validateConfig(config: { activeChain?: number; rpcUrl?: string }
   return warnings;
 }
 
-// ── Private key resolution ──────────────────────────────────────────
-
-export function loadPrivateKey(envVarName = 'PRIVATE_KEY'): string {
-  const fromEnv = process.env[envVarName];
-  if (fromEnv) {
-    // Reduce /proc/pid/environ exposure window
-    delete process.env[envVarName];
-    return fromEnv;
-  }
-
-  if (!keystoreExists()) {
-    exitWithError(
-      `${envVarName} environment variable is not set and no keystore found. ` +
-        `Set ${envVarName} or import a key with: npx tsx scripts/keystore.ts --action import`,
-    );
-  }
-
-  const label = process.env.KEYSTORE_LABEL || 'default';
-  const ks = loadKeystoreFile();
-  const entry = findEntry(ks, label);
-  if (!entry) {
-    exitWithError(
-      `Keystore entry "${label}" not found. Available: ${ks.entries.map((e) => e.label).join(', ') || '(none)'}`,
-    );
-  }
-
-  const password = process.env.KEYSTORE_PASSWORD;
-  if (!password) {
-    exitWithError(
-      'KEYSTORE_PASSWORD environment variable is required to decrypt the keystore. ' +
-        `Set it or use ${envVarName} directly.`,
-    );
-  }
-
-  let privateKey: string;
-  try {
-    privateKey = decryptKey(entry, password);
-  } catch (err) {
-    exitWithError(
-      'Keystore decryption failed. Check KEYSTORE_PASSWORD.',
-      err instanceof Error ? err.message : undefined,
-    );
-  }
-
-  delete process.env.KEYSTORE_PASSWORD;
-
-  const derivedAddress = privateKeyToAddress(privateKey as `0x${string}`);
-  if (derivedAddress.toLowerCase() !== entry.address.toLowerCase()) {
-    exitWithError(
-      `Address mismatch: keystore entry "${label}" claims address ${entry.address} ` +
-        `but decrypted key derives ${derivedAddress}. Keystore may be tampered.`,
-    );
-  }
-
-  return privateKey;
-}
-
 // ── Error handling ──────────────────────────────────────────────────
 
 export function exitWithError(message: string, details?: string): never {
@@ -344,4 +267,37 @@ export function handleError(err: unknown): never {
     exitWithError(err.message, err.stack);
   }
   exitWithError(String(err));
+}
+
+// ── Output helpers ──────────────────────────────────────────────────
+
+export function outputJson(data: unknown): void {
+  console.log(JSON.stringify(data, null, 2));
+}
+
+export async function tryCatch<T>(fn: () => Promise<T>): Promise<{ value?: T; error?: string }> {
+  try {
+    return { value: await fn() };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export function extractIpfsConfig(args: Record<string, string>) {
+  return {
+    ipfsProvider: args['ipfs'],
+    pinataJwt: args['pinata-jwt'] || process.env.PINATA_JWT,
+    filecoinPrivateKey: process.env.FILECOIN_PRIVATE_KEY,
+    ipfsNodeUrl: args['ipfs-node-url'] || process.env.IPFS_NODE_URL,
+  };
+}
+
+export async function submitAndWait<T>(
+  handle: { hash: string; waitMined: (opts?: { timeoutMs?: number; confirmations?: number }) => Promise<{ result: T }> },
+  opts?: { timeoutMs?: number; confirmations?: number },
+): Promise<{ result: T; txHash: string }> {
+  const txHash = handle.hash;
+  console.error(JSON.stringify({ status: 'submitted', txHash }));
+  const { result } = await handle.waitMined(opts ?? { timeoutMs: 120_000 });
+  return { result, txHash };
 }

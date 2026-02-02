@@ -75,17 +75,15 @@ The agent will run the search and present results as a readable table. From ther
 
 ### 4. Write operations (optional)
 
-To register an agent, submit feedback, or manage wallets, you will need a private key set as an environment variable:
+To register an agent, submit feedback, or manage wallets, you need to pair a wallet via WalletConnect. Ask your agent:
 
-```bash
-export PRIVATE_KEY=0xYourHexPrivateKey
-```
+> "Configure 8004 for Sepolia"
 
-Then ask your agent:
+During configuration, the agent will show a QR code in the terminal. Scan it with your wallet app (MetaMask, Rainbow, etc.) to establish a session. Then:
 
 > "Register my agent on-chain"
 
-The agent will gather the required inputs (name, description, endpoints) step by step, show a confirmation summary, and only submit the transaction after you approve.
+The agent will gather the required inputs (name, description, endpoints) step by step, show a confirmation summary, and submit the transaction only after you approve in both the chat and your wallet app.
 
 ## Configuration
 
@@ -96,6 +94,7 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
   "activeChain": 11155111,
   "rpcUrl": "https://rpc.sepolia.org",
   "ipfs": "pinata",
+  "wcProjectId": "optional-walletconnect-project-id",
   "registrations": {}
 }
 ```
@@ -105,44 +104,33 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 | `activeChain` | Chain ID for the active network |
 | `rpcUrl` | RPC endpoint for the active chain |
 | `ipfs` | IPFS pinning provider (`pinata`, `filecoinPin`, `node`, or `null`) |
+| `wcProjectId` | WalletConnect project ID (optional; a default is provided) |
 | `registrations` | Record of agents you have registered, keyed by chain ID |
 
 ## Environment Variables
 
 | Variable | Required For | Description |
 |----------|-------------|-------------|
-| `PRIVATE_KEY` | Register, Update, Feedback, Wallet set/unset | 0x-prefixed hex private key of the agent owner |
+| `WC_PROJECT_ID` | All WC operations (optional) | WalletConnect project ID from cloud.walletconnect.com. A default is provided if not set. |
 | `PINATA_JWT` | IPFS via Pinata | JWT token for Pinata pinning |
 | `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning |
 | `IPFS_NODE_URL` | IPFS via local node | URL of the IPFS node API |
-| `WALLET_PRIVATE_KEY` | Wallet set | Private key of the wallet being set (EIP-712) |
-| `KEYSTORE_PASSWORD` | Write ops (keystore mode) | Password to decrypt the encrypted keystore |
-| `KEYSTORE_LABEL` | Write ops (keystore mode, optional) | Label of the key to use when multiple keys are stored |
 | `SEARCH_API_URL` | Semantic search (optional) | Override URL for the semantic search API |
 | `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
 | `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
 | `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
 
-Read operations (search, load agent, check reputation) do not require `PRIVATE_KEY`. Chains other than Mainnet (1) and Sepolia (11155111) require `SUBGRAPH_URL` and registry address overrides.
+Read operations (search, load agent, check reputation) do not require a wallet connection. Chains other than Mainnet (1) and Sepolia (11155111) require `SUBGRAPH_URL` and registry address overrides.
 
 ## Supported Chains
 
-| Chain | Chain ID | Status | Support |
-|-------|----------|--------|---------|
-| Ethereum Mainnet | 1 | Production | Full |
-| Ethereum Sepolia | 11155111 | Testnet | Full |
-| Base Sepolia | 84532 | Testnet | Requires overrides |
-| Linea Sepolia | 59141 | Testnet | Requires overrides |
-| Polygon Amoy | 80002 | Testnet | Requires overrides |
-| Hedera Testnet | 296 | Testnet | Requires overrides |
-| HyperEVM Testnet | 998 | Testnet | Requires overrides |
-| SKALE Sepolia | 1351057110 | Testnet | Requires overrides |
+**Full support** (built-in contract addresses and subgraph URLs): Ethereum Mainnet (1), Ethereum Sepolia (11155111).
 
-"Full" support means the SDK has built-in contract addresses and subgraph URLs. "Requires overrides" means you must set `SUBGRAPH_URL`, `REGISTRY_ADDRESS_IDENTITY`, and `REGISTRY_ADDRESS_REPUTATION` environment variables. For contract addresses and RPC endpoints, see `reference/chains.md` inside the project.
+**Requires overrides** (`SUBGRAPH_URL`, `REGISTRY_ADDRESS_IDENTITY`, `REGISTRY_ADDRESS_REPUTATION`): Base Sepolia (84532), Linea Sepolia (59141), Polygon Amoy (80002), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Sepolia (1351057110).
+
+For contract addresses and RPC endpoints, see [`reference/chains.md`](reference/chains.md).
 
 ## Manual Installation
-
-If you prefer not to use the wizard, clone the repo, install dependencies, and symlink into the agent directory yourself:
 
 ```bash
 git clone https://github.com/matteoscurati/8004skill.git
@@ -160,8 +148,9 @@ ln -s "$(pwd)" ~/.openclaw/skills/8004skill
 
 ## Security
 
-- Private keys are **never stored in plaintext** on disk. They are passed via environment variables, or stored in an encrypted keystore (`~/.8004skill/keystore.json`, AES-256-GCM with PBKDF2-derived keys).
-- The skill runs a preflight check before every write operation to confirm the signer address.
+- **Private keys never touch the agent.** All signing is done via WalletConnect v2 — transactions are signed in the user's wallet app (MetaMask, Rainbow, etc.).
+- The WalletConnect session file (`~/.8004skill/wc-storage.json`) contains only relay metadata, no key material.
+- The skill runs a preflight check before every write operation to confirm the connected wallet address.
 - All on-chain writes require explicit user confirmation before submission.
 - Config files are created with `chmod 600` (owner-only read/write).
 

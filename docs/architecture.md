@@ -29,7 +29,7 @@ User <---> AI Agent <---> TypeScript Scripts <---> agent0-sdk <---> EVM Chain / 
 Key properties:
 
 - **ESM-only** TypeScript project. Node >= 22. Executed via `npx tsx`.
-- **Single dependency**: `agent0-sdk ^1.4.2` (bundles viem, IPFS clients, subgraph client).
+- **Runtime dependencies**: `agent0-sdk` (bundles viem, IPFS clients, subgraph client), `@walletconnect/ethereum-provider`, `qrcode-terminal`.
 - **No build step at runtime** -- tsx compiles on the fly. `tsc` is for type checking only.
 - **Stateless scripts** -- each invocation is a standalone process. State lives in `~/.8004skill/config.json` and environment variables.
 
@@ -42,7 +42,7 @@ Key properties:
 ```
 +------------------+     1. reads      +------------------+
 |    AI Agent      | <-----------------+    SKILL.md      |
-|  (LLM runtime)  |                    | (8 ops + Update) |
+|  (LLM runtime)  |                    | (9 ops + Update) |
 +--------+---------+                   +------------------+
          |
          | 2. presents menus, gathers inputs conversationally
@@ -85,18 +85,6 @@ Key properties:
 +------------------+
 ```
 
-### Step-by-step
-
-1. **SKILL.md load** -- The agent reads the skill definition which declares 8 operations plus an Update Agent sub-flow as wizard flows with input schemas, CLI templates, and output formatting rules.
-2. **Intent mapping** -- The agent matches user input ("register my agent") to an operation (Operation 2: Register Agent).
-3. **Input gathering** -- The agent walks the user through required/optional fields conversationally (name, description, chain, endpoints).
-4. **Command construction** -- The agent assembles the CLI invocation internally. Raw commands are never exposed to the user.
-5. **Script execution** -- The agent runs `npx tsx scripts/<name>.ts --flag value` in a subprocess. Environment variables (PRIVATE_KEY, PINATA_JWT) are passed through the process environment.
-6. **SDK interaction** -- The script instantiates `agent0-sdk` with the provided config and calls the appropriate methods.
-7. **On-chain/off-chain** -- SDK handles RPC calls, subgraph queries, IPFS uploads, and the semantic search API.
-8. **Output** -- Scripts write JSON results to stdout and progress/errors to stderr.
-9. **Presentation** -- The agent parses the JSON and formats it as readable text for the user.
-
 ### I/O Contract
 
 All scripts follow the same I/O protocol:
@@ -116,7 +104,7 @@ All scripts follow the same I/O protocol:
 
 ```
 scripts/
-  check-env.ts       # Environment preflight (no SDK, uses viem directly)
+  check-env.ts       # Environment preflight (WC session status, env vars)
   register.ts        # Register new agent on-chain
   load-agent.ts      # Load agent details
   update-agent.ts    # Update agent metadata
@@ -126,10 +114,11 @@ scripts/
   connect.ts         # Agent discovery and inspection
   wallet.ts          # EIP-712 wallet management
   verify.ts          # EIP-191 identity signing and verification
-  keystore.ts        # Interactive encrypted keystore management (user-run, not by agent)
+  wc-pair.ts         # WalletConnect pairing / session status
+  wc-disconnect.ts   # WalletConnect session disconnect
   lib/
     shared.ts        # CLI parsing, validation, SDK config helpers
-    keystore.ts      # Encrypted keystore library (AES-256-GCM, PBKDF2)
+    walletconnect.ts # WalletConnect session manager (FileSystemStorage, provider init)
 ```
 
 ### Shared Library (`scripts/lib/shared.ts`)
@@ -141,13 +130,17 @@ Every script imports from `shared.ts`. It provides:
 | `parseArgs()` | Converts `--flag value` argv into `Record<string, string>`. Boolean flags (no value) become `"true"`. |
 | `requireArg(args, key, label)` | Exits with error if `args[key]` is missing. Returns the value. |
 | `parseChainId(raw, fallback)` | Parses chain ID string to number. Default fallback: `11155111` (Sepolia). |
-| `parseIntStrict(raw, name)` | Strict integer parse. Exits on NaN. |
 | `validateAgentId(id)` | Validates `chainId:tokenId` format via regex `/^\d+:\d+$/`. |
 | `validateAddress(addr, name)` | Validates `0x`-prefixed 40-hex-char Ethereum address. |
 | `validateIpfsProvider(raw)` | Validates against allowed set: `pinata`, `filecoinPin`, `node`. |
-| `buildSdkConfig(opts)` | Builds `SDKConfig` object from CLI args and env vars. Validates IPFS provider dependencies. |
+| `buildSdkConfig(opts)` | Builds `SDKConfig` object from CLI args and env vars. Validates IPFS provider dependencies. Accepts `walletProvider` for write ops. |
+| `loadWalletProvider(chainId)` | Restores WalletConnect session or triggers new pairing (QR code). Returns EIP-1193 provider. |
 | `exitWithError(message, details?)` | Writes JSON error to stderr and calls `process.exit(1)`. |
 | `handleError(err)` | Catch-all for unhandled errors. Delegates to `exitWithError`. |
+| `outputJson(data)` | Writes `JSON.stringify(data, null, 2)` to stdout. |
+| `tryCatch(fn)` | Wraps an async call, returns `{ value?, error? }` for non-fatal lookups. |
+| `extractIpfsConfig(args)` | Extracts IPFS provider, Pinata JWT, Filecoin key, and node URL from args/env. |
+| `submitAndWait(handle, opts?)` | Logs `{status:'submitted', txHash}` to stderr, waits for mining, returns `{result, txHash}`. |
 
 ### Script Pattern
 
@@ -168,7 +161,7 @@ async function main() {
   validateAgentId(agentId);
 
   // 3. Build SDK config
-  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, privateKey, ... }));
+  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl }));
 
   // 4. Call SDK methods
   const agent = await sdk.loadAgent(agentId);
@@ -182,7 +175,8 @@ main().catch(handleError);
 ```
 
 Write operations add:
-- PRIVATE_KEY check before SDK instantiation
+- `loadWalletProvider(chainId)` to restore or initiate WalletConnect session
+- `walletProvider` passed to `buildSdkConfig()` for signing
 - Progress reporting to stderr (`{"status":"submitted","txHash":"0x..."}`)
 - `waitMined({ timeoutMs: 120_000 })` on transaction handles
 
@@ -191,7 +185,7 @@ Write operations add:
 ```
                   +---------------------------+
                   |      Read Scripts         |
-                  |  (no PRIVATE_KEY needed)  |
+                  |  (no wallet needed)       |
                   +---------------------------+
                   | check-env.ts              |  Environment status
                   | load-agent.ts             |  Agent details
@@ -204,30 +198,38 @@ Write operations add:
 
                   +---------------------------+
                   |      Write Scripts        |
-                  |  (PRIVATE_KEY required)   |
+                  |  (WalletConnect required) |
                   +---------------------------+
                   | register.ts               |  Mint agent NFT
                   | update-agent.ts           |  Update metadata URI
                   | feedback.ts               |  Submit on-chain feedback
-                  | wallet.ts --action set    |  Set wallet (+ WALLET_PRIVATE_KEY)
+                  | wallet.ts --action set    |  Set wallet
                   | wallet.ts --action unset  |  Unset wallet
                   | verify.ts --action sign   |  Sign identity proof
+                  +---------------------------+
+
+                  +---------------------------+
+                  |    Session Management     |
+                  +---------------------------+
+                  | wc-pair.ts                |  Pair wallet / check status
+                  | wc-disconnect.ts          |  Disconnect session
                   +---------------------------+
 ```
 
 Write scripts all follow the same transaction lifecycle:
 
 ```
-PRIVATE_KEY check -> SDK init -> build tx -> submit ->
+loadWalletProvider() -> SDK init with walletProvider -> build tx -> submit ->
   stderr: {"status":"submitted","txHash":"0x..."} ->
+  user approves in wallet app ->
   waitMined(120s) -> stdout: result JSON
 ```
 
 ### Script-specific Notes
 
-- **check-env.ts** -- Only script that does not use `agent0-sdk` SDK class. Imports `privateKeyToAddress` from `viem/accounts` directly to derive the signer address.
+- **check-env.ts** -- Only script that does not use `agent0-sdk` SDK class. Reports WalletConnect session status, connected address, and configured env vars.
 - **search.ts** -- Dual-mode: semantic search (POST to `https://search.ag0.xyz/api/v1/search`, no SDK needed) or subgraph search (SDK `searchAgents`). Routes based on presence of `--query` flag.
-- **wallet.ts** -- Tri-modal (`--action get|set|unset`). The `set` action requires both PRIVATE_KEY (owner) and WALLET_PRIVATE_KEY (for EIP-712 typed signature).
+- **wallet.ts** -- Tri-modal (`--action get|set|unset`). The `set` action signs via WalletConnect, or accepts a `--signature` flag with a pre-generated EIP-712 signature.
 - **update-agent.ts** -- Loads existing agent, applies mutations, re-publishes. Validates at least one mutation flag is present.
 - **connect.ts** -- Combines agent details + reputation summary in a single response. Used for the "Inspect Agent" operation.
 
@@ -280,17 +282,18 @@ Reputation Registry contract  ->  on-chain feedback signal
 ### Wallet Set (write)
 
 ```
-PRIVATE_KEY (owner)  +  WALLET_PRIVATE_KEY (wallet)
-         |                        |
-         v                        v
-  SDK init with owner    EIP-712 typed signature
-         |                        |
-         +-------+-------+-------+
-                 |
-                 v
-    agent.setWallet(address, { newWalletPrivateKey })
-                 |
-                 v
+WalletConnect session (owner)
+         |
+         v
+  SDK init with walletProvider
+         |
+         v
+    agent.setWallet(address)   (or --signature for pre-signed EIP-712)
+         |
+         v
+    User approves in wallet app
+         |
+         v
     Identity Registry: setAgentWallet(agentId, wallet, sig, deadline)
 ```
 
@@ -328,6 +331,7 @@ Location: `~/.8004skill/config.json` (permissions: `chmod 600`)
   "activeChain": 11155111,
   "rpcUrl": "https://rpc.sepolia.org",
   "ipfs": "pinata",
+  "wcProjectId": "optional-walletconnect-project-id",
   "registrations": {
     "11155111": {
       "agentId": "11155111:42",
@@ -338,19 +342,20 @@ Location: `~/.8004skill/config.json` (permissions: `chmod 600`)
 }
 ```
 
-The config directory `~/.8004skill/` is created with `chmod 700`. The agent manages this file -- scripts do not read it directly. The agent reads the config, extracts values, and passes them as CLI flags.
+The config directory `~/.8004skill/` is created with `chmod 700`. The agent manages this file -- scripts do not read it directly. The agent reads the config, extracts values, and passes them as CLI flags. WalletConnect session state is stored separately at `~/.8004skill/wc-storage.json` (chmod 600).
 
 ### Environment Variables
 
 | Variable | Used By | Purpose |
 |----------|---------|---------|
-| `PRIVATE_KEY` | register, update-agent, feedback, wallet set/unset | Agent owner private key (0x-prefixed hex) |
+| `WC_PROJECT_ID` | All write scripts (optional) | WalletConnect project ID. A default is provided if not set. |
 | `PINATA_JWT` | register, update-agent, feedback | JWT for Pinata IPFS pinning |
 | `FILECOIN_PRIVATE_KEY` | register, update-agent, feedback | Private key for Filecoin pinning |
 | `IPFS_NODE_URL` | register, update-agent, feedback | URL of local IPFS node API |
-| `WALLET_PRIVATE_KEY` | wallet set | Private key of the wallet to be set (for EIP-712 signature) |
-| `SEARCH_API_URL` | search | Override semantic search endpoint (default: `https://search.ag0.xyz/api/v1/search`) |
-| `GRAPH_API_KEY` | SDK (subgraph) | The Graph API key for subgraph queries |
+| `SEARCH_API_URL` | search | Override semantic search endpoint |
+| `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
+| `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
+| `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
 
 ### How Config Flows to Scripts
 
@@ -370,38 +375,31 @@ Environment variables pass through the process environment directly. Some can al
 
 ### Principles
 
-1. **No plaintext secrets on disk.** Private keys are passed via environment variables or stored in an encrypted keystore (`~/.8004skill/keystore.json`, AES-256-GCM with PBKDF2-derived keys). Plaintext keys are never written to disk.
-2. **Preflight check.** `check-env.ts` runs before every write operation to confirm signer address with the user.
-3. **Explicit confirmation.** All on-chain writes require user approval -- the agent shows transaction details and asks before executing.
-4. **Opaque execution.** Raw CLI commands are never shown to the user. The agent builds and executes them internally.
-5. **Restrictive permissions.** Config directory is `chmod 700`, config file and keystore are `chmod 600`.
-6. **Signal hardening.** Write scripts call `initSecurityHardening()` at startup to install signal handlers that wipe sensitive env vars (`PRIVATE_KEY`, `WALLET_PRIVATE_KEY`) on interruption.
+See [reference/security.md](../reference/security.md) for the full security model, including WalletConnect protections, untrusted content policies, and env var handling.
 
 ### Threat Surface
 
 ```
-+---------------------+-----------------------------------+-------------------+
-| Layer               | Threat                            | Mitigation        |
-+---------------------+-----------------------------------+-------------------+
-| Environment vars    | Key leakage via process listing   | Short-lived       |
-|                     |                                   | processes +       |
-|                     |                                   | signal wipe       |
-+---------------------+-----------------------------------+-------------------+
-| Encrypted keystore  | Brute-force / unauthorized read   | AES-256-GCM,     |
-|                     |                                   | PBKDF2, chmod 600 |
-+---------------------+-----------------------------------+-------------------+
-| Config file         | Unauthorized read                 | chmod 600         |
-+---------------------+-----------------------------------+-------------------+
-| Script output       | Key in stdout/stderr              | Scripts never     |
-|                     |                                   | echo keys         |
-+---------------------+-----------------------------------+-------------------+
-| On-chain writes     | Unintended transactions           | Preflight check + |
-|                     |                                   | user confirmation |
-+---------------------+-----------------------------------+-------------------+
-| RPC endpoint        | Man-in-the-middle                 | HTTPS endpoints   |
-+---------------------+-----------------------------------+-------------------+
-| EIP-712 wallet set  | Replay / expired signature        | 300s deadline     |
-+---------------------+-----------------------------------+-------------------+
++---------------------+-----------------------------------+--------------------+
+| Layer               | Threat                            | Mitigation         |
++---------------------+-----------------------------------+--------------------+
+| WC session file     | Session hijacking if attacker     | chmod 600,         |
+|                     | accesses wc-storage.json          | symlink checks,    |
+|                     |                                   | user still approves|
+|                     |                                   | each tx in wallet  |
++---------------------+-----------------------------------+--------------------+
+| Config file         | Unauthorized read                 | chmod 600          |
++---------------------+-----------------------------------+--------------------+
+| Cloud-synced dirs   | Session file replicated to cloud  | Preflight warning  |
++---------------------+-----------------------------------+--------------------+
+| On-chain writes     | Unintended transactions           | Preflight check +  |
+|                     |                                   | user confirmation  |
+|                     |                                   | + wallet approval  |
++---------------------+-----------------------------------+--------------------+
+| RPC endpoint        | Man-in-the-middle                 | HTTPS endpoints    |
++---------------------+-----------------------------------+--------------------+
+| EIP-712 wallet set  | Replay / expired signature        | 300s deadline      |
++---------------------+-----------------------------------+--------------------+
 ```
 
 ### Write Operation Guard Sequence
@@ -514,12 +512,13 @@ ERC-8004 data structures: registration file format, agent summary (from subgraph
 
 ### `reference/security.md`
 
-Security rules for key handling, confirmation requirements, and untrusted content policies. The agent reads this to enforce:
+Security rules, WalletConnect security model, and untrusted content policies. The agent reads this to enforce:
 
 - Never showing raw CLI commands to users
 - Always confirming before write operations
-- Never logging or echoing private keys
-- Treating untrusted content (user-provided URLs, IPFS data) safely
+- Never accepting, displaying, or storing private keys
+- WalletConnect session file protections
+- Treating untrusted content (user-provided URLs, IPFS data, agent metadata) safely
 
 ### How Scripts Use Reference Data
 
