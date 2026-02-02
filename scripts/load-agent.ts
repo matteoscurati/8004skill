@@ -17,6 +17,7 @@ import {
   handleError,
   outputJson,
   tryCatch,
+  buildAgentDetails,
 } from './lib/shared.js';
 
 async function main() {
@@ -33,29 +34,10 @@ async function main() {
   const walletResult = await tryCatch(() => agent.getWallet());
   const walletAddress = walletResult.value || agent.walletAddress;
 
-  const result: Record<string, unknown> = {
-    agentId: agent.agentId,
-    name: agent.name,
-    description: agent.description,
-    image: agent.image,
-    active: regFile.active,
-
-    mcpEndpoint: agent.mcpEndpoint,
-    a2aEndpoint: agent.a2aEndpoint,
-    ensName: agent.ensEndpoint,
-
-    mcpTools: agent.mcpTools || [],
-    mcpPrompts: agent.mcpPrompts || [],
-    mcpResources: agent.mcpResources || [],
-    a2aSkills: agent.a2aSkills || [],
-
+  const result = buildAgentDetails(agent, regFile, {
     walletAddress: walletAddress || null,
-    trustModels: regFile.trustModels,
-    owners: regFile.owners,
-    endpoints: regFile.endpoints,
     metadata: regFile.metadata,
-  };
-
+  });
   if (walletResult.error) result.walletError = walletResult.error;
 
   outputJson(result);

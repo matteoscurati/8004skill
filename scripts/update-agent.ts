@@ -5,7 +5,7 @@
  *
  * Usage:
  *   npx tsx update-agent.ts --agent-id 11155111:42 --chain-id 11155111 \
- *     --rpc-url https://rpc.sepolia.org --ipfs pinata --pinata-jwt "..." --name "NewName"
+ *     --rpc-url https://rpc.sepolia.org --ipfs pinata --name "NewName"
  */
 
 import { SDK, EndpointType } from 'agent0-sdk';
@@ -23,6 +23,7 @@ import {
   handleError,
   outputJson,
   submitAndWait,
+  emitWalletPrompt,
 } from './lib/shared.js';
 
 const MUTATION_FLAGS = [
@@ -124,8 +125,8 @@ async function main() {
     let kv: Record<string, unknown>;
     try {
       kv = JSON.parse(args['metadata']);
-    } catch {
-      exitWithError(`Invalid --metadata: not valid JSON. Expected format: '{"key":"value"}'`);
+    } catch (e) {
+      exitWithError(`Invalid --metadata: ${e instanceof Error ? e.message : 'not valid JSON'}. Expected format: '{"key":"value"}'`);
     }
     agent.setMetadata(kv);
   }
@@ -133,7 +134,7 @@ async function main() {
     for (const key of splitCsv(args['del-metadata'])) agent.delMetadata(key);
   }
 
-  console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to approve the transaction...' }));
+  emitWalletPrompt();
 
   const httpUri = args['http-uri'];
   const handle = ipfsProvider

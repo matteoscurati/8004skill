@@ -39,7 +39,7 @@ function detectCloudSync(): string | null {
   try {
     resolvedPath = realpathSync(wcStoragePath);
   } catch {
-    return null;
+    return 'Could not resolve real path of WC storage file; cloud-sync detection skipped.';
   }
 
   const home = homedir();
@@ -86,14 +86,14 @@ function checkConfigFile(): string[] {
       );
     }
   } catch {
-    // Can't stat — not critical, skip
+    warnings.push(`Could not stat ${configPath}; permission checks skipped.`);
   }
 
   try {
     const raw = JSON.parse(readFileSync(configPath, 'utf-8'));
     warnings.push(...validateConfig({ activeChain: raw.activeChain, rpcUrl: raw.rpcUrl }).map((w) => w.message));
   } catch {
-    // Can't parse — not critical, skip
+    warnings.push(`Could not parse ${configPath}; config validation skipped.`);
   }
 
   return warnings;

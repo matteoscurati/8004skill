@@ -27,6 +27,7 @@ import {
   handleError,
   outputJson,
   submitAndWait,
+  emitWalletPrompt,
 } from './lib/shared.js';
 
 async function main() {
@@ -56,7 +57,7 @@ async function main() {
     }),
   );
 
-  console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to approve the transaction...' }));
+  emitWalletPrompt();
 
   if (action === 'revoke') {
     const feedbackIndexRaw = requireArg(args, 'feedback-index', 'feedback index to revoke');

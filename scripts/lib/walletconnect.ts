@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, mkdirSync, chmodSync, lstatSync, fstatSync, openSync, writeSync, closeSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, lstatSync, fstatSync, openSync, writeSync, closeSync, constants as fsConstants } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { IKeyValueStorage } from '@walletconnect/keyvaluestorage';
@@ -27,10 +27,10 @@ type StorageData = Record<string, unknown>;
 
 function loadStorageData(): StorageData {
   if (!existsSync(WC_STORAGE_FILE)) return {};
+  if (lstatSync(WC_STORAGE_FILE).isSymbolicLink()) {
+    throw new Error(`Refusing to read symlink: ${WC_STORAGE_FILE}`);
+  }
   try {
-    if (lstatSync(WC_STORAGE_FILE).isSymbolicLink()) {
-      throw new Error(`Refusing to read symlink: ${WC_STORAGE_FILE}`);
-    }
     return JSON.parse(readFileSync(WC_STORAGE_FILE, 'utf-8')) as StorageData;
   } catch {
     return {};
@@ -39,15 +39,17 @@ function loadStorageData(): StorageData {
 
 function saveStorageData(data: StorageData): void {
   if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
-    chmodSync(CONFIG_DIR, 0o700);
+    mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
   }
 
   if (existsSync(WC_STORAGE_FILE) && lstatSync(WC_STORAGE_FILE).isSymbolicLink()) {
     throw new Error(`Refusing to write symlink: ${WC_STORAGE_FILE}`);
   }
 
-  const fd = openSync(WC_STORAGE_FILE, 'w', 0o600);
+  // O_NOFOLLOW prevents writing through symlinks; cast needed because Node types omit it on some platforms
+  const O_NOFOLLOW = (fsConstants as Record<string, number>).O_NOFOLLOW ?? 0;
+  const flags = fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_TRUNC | O_NOFOLLOW;
+  const fd = openSync(WC_STORAGE_FILE, flags, 0o600);
   try {
     const fdStat = fstatSync(fd);
     if (!fdStat.isFile()) {
@@ -93,7 +95,11 @@ export class FileSystemStorage extends IKeyValueStorage {
 // ── WalletConnect Provider Init ─────────────────────────────────────
 
 export function resolveProjectId(): string {
-  return process.env.WC_PROJECT_ID || readProjectIdFromConfig() || DEFAULT_PROJECT_ID;
+  const fromEnv = process.env.WC_PROJECT_ID;
+  if (fromEnv) return fromEnv;
+  const fromConfig = readProjectIdFromConfig();
+  if (fromConfig) return fromConfig;
+  return DEFAULT_PROJECT_ID;
 }
 
 function readProjectIdFromConfig(): string | undefined {
@@ -157,10 +163,10 @@ export async function initWalletConnectProvider(opts: {
           params: [{ chainId: `0x${opts.chainId.toString(16)}` }],
         });
       } catch {
-        console.error(JSON.stringify({
-          status: 'warning',
-          message: `Could not switch wallet to chain ${opts.chainId}. Current chain: ${provider.chainId}`,
-        }));
+        throw new Error(
+          `Wallet is on chain ${provider.chainId} but script requires chain ${opts.chainId}. ` +
+          `Switch chains in your wallet or start a new session with wc-pair.ts --chain-id ${opts.chainId}`,
+        );
       }
     }
   }
@@ -184,10 +190,12 @@ export function getConnectedAddress(provider: EthereumProvider): string {
 }
 
 export async function disconnectSession(): Promise<void> {
+  const sessionInfo = getSessionInfo();
+  const chainId = sessionInfo.chainId ?? 1;
   const storage = new FileSystemStorage();
   const provider = await EthereumProvider.init({
     projectId: resolveProjectId(),
-    chains: [1],
+    chains: [chainId],
     showQrModal: false,
     storage,
     storageOptions: { database: WC_STORAGE_FILE },

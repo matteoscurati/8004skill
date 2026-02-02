@@ -1,5 +1,6 @@
 import type { SDKConfig } from 'agent0-sdk';
 import type EthereumProvider from '@walletconnect/ethereum-provider';
+import { isAddress } from 'viem';
 import { initWalletConnectProvider, getConnectedAddress } from './walletconnect.js';
 
 // ── Script version ──────────────────────────────────────────────────
@@ -32,7 +33,7 @@ export function requireArg(args: Record<string, string>, key: string, label: str
 
 export function parseChainId(raw: string | undefined, fallback = '11155111'): number {
   const val = parseInt(raw || fallback, 10);
-  if (Number.isNaN(val)) exitWithError(`Invalid chain-id: "${raw}". Must be a number.`);
+  if (Number.isNaN(val) || val < 1) exitWithError(`Invalid chain-id: "${raw}". Must be a positive integer.`);
   return val;
 }
 
@@ -72,11 +73,17 @@ export function validateAgentId(id: string): void {
 export function validateAddress(addr: string, name: string): void {
   if (!/^0x[0-9a-fA-F]{40}$/.test(addr))
     exitWithError(`Invalid ${name}: "${addr}". Must be a 0x-prefixed 40-hex-char address.`);
+  if (!isAddress(addr, { strict: true })) {
+    console.error(JSON.stringify({
+      status: 'warning',
+      message: `${name} "${addr}" has an invalid EIP-55 checksum. Use all-lowercase or correct mixed-case.`
+    }));
+  }
 }
 
 export function validateSignature(sig: string): void {
-  if (!/^0x[0-9a-fA-F]+$/.test(sig))
-    exitWithError(`Invalid signature: "${sig}". Must be a 0x-prefixed hex string.`);
+  if (!/^0x[0-9a-fA-F]{130,}$/.test(sig))
+    exitWithError(`Invalid signature: "${sig}". Must be a 0x-prefixed hex string (at least 65 bytes).`);
 }
 
 const VALID_IPFS = ['pinata', 'filecoinPin', 'node'] as const;
@@ -105,6 +112,7 @@ export async function fetchWithRetry(url: string, options: RequestInit): Promise
     try {
       lastResponse = await fetch(url, options);
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') throw err;
       lastError = err;
       continue;
     }
@@ -153,7 +161,7 @@ export function buildSdkConfig(opts: {
     config.ipfs = provider;
 
     if (provider === 'pinata') {
-      if (!opts.pinataJwt) exitWithError('--pinata-jwt or PINATA_JWT env var required when using --ipfs pinata');
+      if (!opts.pinataJwt) exitWithError('PINATA_JWT env var required when using --ipfs pinata');
       config.pinataJwt = opts.pinataJwt;
     }
     if (provider === 'filecoinPin') {
@@ -264,7 +272,7 @@ export function exitWithError(message: string, details?: string): never {
 
 export function handleError(err: unknown): never {
   if (err instanceof Error) {
-    exitWithError(err.message, err.stack);
+    exitWithError(err.message, process.env.DEBUG ? err.stack : undefined);
   }
   exitWithError(String(err));
 }
@@ -275,18 +283,82 @@ export function outputJson(data: unknown): void {
   console.log(JSON.stringify(data, null, 2));
 }
 
+export function emitWalletPrompt(action: 'transaction' | 'signature' = 'transaction'): void {
+  const msg = action === 'signature'
+    ? 'Check your wallet to sign the message...'
+    : 'Check your wallet to approve the transaction...';
+  console.error(JSON.stringify({ status: 'awaiting_wallet', message: msg }));
+}
+
+interface AgentLike {
+  agentId?: string;
+  name: string;
+  description: string;
+  image?: string;
+  mcpEndpoint?: string;
+  a2aEndpoint?: string;
+  ensEndpoint?: string;
+  mcpTools?: unknown[];
+  mcpPrompts?: unknown[];
+  mcpResources?: unknown[];
+  a2aSkills?: unknown[];
+  walletAddress?: string;
+}
+
+interface RegFileLike {
+  active: boolean;
+  trustModels?: unknown;
+  owners?: unknown;
+  endpoints?: unknown;
+}
+
+export function buildAgentDetails(
+  agent: AgentLike,
+  regFile: RegFileLike,
+  extras?: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    agentId: agent.agentId,
+    name: agent.name,
+    description: agent.description,
+    image: agent.image,
+    active: regFile.active,
+    mcpEndpoint: agent.mcpEndpoint,
+    a2aEndpoint: agent.a2aEndpoint,
+    ensName: agent.ensEndpoint,
+    mcpTools: agent.mcpTools || [],
+    mcpPrompts: agent.mcpPrompts || [],
+    mcpResources: agent.mcpResources || [],
+    a2aSkills: agent.a2aSkills || [],
+    trustModels: regFile.trustModels,
+    owners: regFile.owners,
+    endpoints: regFile.endpoints,
+    ...extras,
+  };
+}
+
 export async function tryCatch<T>(fn: () => Promise<T>): Promise<{ value?: T; error?: string }> {
   try {
     return { value: await fn() };
   } catch (err) {
+    if (process.env.DEBUG && err instanceof Error && err.stack) {
+      console.error(JSON.stringify({ status: 'debug', error: err.message, stack: err.stack }));
+    }
     return { error: err instanceof Error ? err.message : String(err) };
   }
 }
 
-export function extractIpfsConfig(args: Record<string, string>) {
+export interface IpfsConfig {
+  ipfsProvider?: string;
+  pinataJwt?: string;
+  filecoinPrivateKey?: string;
+  ipfsNodeUrl?: string;
+}
+
+export function extractIpfsConfig(args: Record<string, string>): IpfsConfig {
   return {
     ipfsProvider: args['ipfs'],
-    pinataJwt: args['pinata-jwt'] || process.env.PINATA_JWT,
+    pinataJwt: process.env.PINATA_JWT,
     filecoinPrivateKey: process.env.FILECOIN_PRIVATE_KEY,
     ipfsNodeUrl: args['ipfs-node-url'] || process.env.IPFS_NODE_URL,
   };

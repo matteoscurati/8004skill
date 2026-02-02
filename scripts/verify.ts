@@ -32,6 +32,7 @@ import {
   handleError,
   outputJson,
   tryCatch,
+  emitWalletPrompt,
 } from './lib/shared.js';
 import { getConnectedAddress } from './lib/walletconnect.js';
 
@@ -77,7 +78,7 @@ async function main() {
 
     const message = args['message'] || buildChallenge(agentId);
 
-    console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to sign the message...' }));
+    emitWalletPrompt('signature');
 
     // Sign via WalletConnect (personal_sign)
     const signature = await walletProvider.request<string>({

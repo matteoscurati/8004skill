@@ -20,6 +20,13 @@ import {
   outputJson,
 } from './lib/shared.js';
 
+function parseLimit(raw: string | undefined, fallback = 20): number {
+  if (!raw) return fallback;
+  const val = parseInt(raw, 10);
+  if (Number.isNaN(val) || val < 1) exitWithError(`Invalid --limit: "${raw}". Must be a positive integer.`);
+  return val;
+}
+
 const DEFAULT_SEARCH_URL = 'https://agent0-semantic-search.dawid-pisarczyk.workers.dev/api/v1/search';
 const FETCH_TIMEOUT_MS = 30_000;
 
@@ -84,12 +91,7 @@ async function subgraphSearch(args: Record<string, string>) {
   if (args['active'] === 'true') filters.active = true;
   if (args['chains'] === 'all') filters.chains = 'all';
 
-  const limitRaw = args['limit'];
-  let pageSize = 20;
-  if (limitRaw) {
-    pageSize = parseInt(limitRaw, 10);
-    if (Number.isNaN(pageSize)) exitWithError(`Invalid --limit: "${limitRaw}". Must be a number.`);
-  }
+  const pageSize = parseLimit(args['limit']);
 
   const options: SearchOptions = { pageSize };
   return await sdk.searchAgents(filters, options);
@@ -101,11 +103,7 @@ async function main() {
   if (args['query']) {
     const chainId = args['chain-id'] ? parseChainId(args['chain-id']) : undefined;
 
-    let limit: number | undefined;
-    if (args['limit']) {
-      limit = parseInt(args['limit'], 10);
-      if (Number.isNaN(limit)) exitWithError(`Invalid --limit: "${args['limit']}". Must be a number.`);
-    }
+    const limit = args['limit'] ? parseLimit(args['limit']) : undefined;
 
     const result = await semanticSearch(args['query'], {
       chainId,

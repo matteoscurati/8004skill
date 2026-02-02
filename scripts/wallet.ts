@@ -38,6 +38,7 @@ import {
   handleError,
   outputJson,
   submitAndWait,
+  emitWalletPrompt,
 } from './lib/shared.js';
 
 async function main() {
@@ -61,7 +62,7 @@ async function main() {
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, walletProvider, ...getOverridesFromEnv(chainId) }));
   const agent = await sdk.loadAgent(agentId);
 
-  console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to approve the transaction...' }));
+  emitWalletPrompt();
 
   if (action === 'set') {
     const walletAddress = requireArg(args, 'wallet-address', 'wallet to set');

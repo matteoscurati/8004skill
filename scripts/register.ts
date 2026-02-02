@@ -6,7 +6,7 @@
  *
  * Usage:
  *   npx tsx register.ts --chain-id 11155111 --rpc-url https://rpc.sepolia.org \
- *     --name "MyAgent" --description "An AI agent" --ipfs pinata --pinata-jwt "..."
+ *     --name "MyAgent" --description "An AI agent" --ipfs pinata
  */
 
 import { SDK } from 'agent0-sdk';
@@ -24,6 +24,7 @@ import {
   handleError,
   outputJson,
   submitAndWait,
+  emitWalletPrompt,
 } from './lib/shared.js';
 
 async function main() {
@@ -74,7 +75,7 @@ async function main() {
     for (const slug of splitCsv(domains)) agent.addDomain(slug, validateOasf);
   }
 
-  console.error(JSON.stringify({ status: 'awaiting_wallet', message: 'Check your wallet to approve the transaction...' }));
+  emitWalletPrompt();
 
   const handle = httpUri
     ? await agent.registerHTTP(httpUri)
