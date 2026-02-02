@@ -10,7 +10,7 @@ import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
-  parseChainId,
+  requireChainId,
   validateAgentId,
   buildSdkConfig,
   getOverridesFromEnv,
@@ -24,7 +24,7 @@ async function main() {
   const args = parseArgs();
   const agentId = requireArg(args, 'agent-id', 'agent to load');
   validateAgentId(agentId);
-  const chainId = parseChainId(args['chain-id']);
+  const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
 
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));

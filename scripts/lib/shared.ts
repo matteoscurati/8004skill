@@ -31,8 +31,8 @@ export function requireArg(args: Record<string, string>, key: string, label: str
 
 // ── Validation helpers ──────────────────────────────────────────────
 
-export function parseChainId(raw: string | undefined, fallback = '11155111'): number {
-  const val = parseInt(raw || fallback, 10);
+export function parseChainId(raw: string | undefined): number {
+  const val = parseInt(raw ?? '', 10);
   if (Number.isNaN(val) || val < 1) exitWithError(`Invalid chain-id: "${raw}". Must be a positive integer.`);
   return val;
 }
@@ -40,7 +40,7 @@ export function parseChainId(raw: string | undefined, fallback = '11155111'): nu
 export function requireChainId(raw: string | undefined): number {
   if (raw === undefined) {
     exitWithError(
-      '--chain-id is required for write operations. ' +
+      '--chain-id is required. ' +
         'Specify the target chain explicitly (e.g. --chain-id 11155111 for Sepolia).',
     );
   }
@@ -362,6 +362,25 @@ export function extractIpfsConfig(args: Record<string, string>): IpfsConfig {
     filecoinPrivateKey: process.env.FILECOIN_PRIVATE_KEY,
     ipfsNodeUrl: args['ipfs-node-url'] || process.env.IPFS_NODE_URL,
   };
+}
+
+/**
+ * Validate that the required env var for the chosen IPFS provider is set.
+ * Call this **before** `loadWalletProvider()` so the user doesn't waste
+ * a wallet approval only to fail on a missing env var afterwards.
+ */
+export function validateIpfsEnv(config: IpfsConfig): void {
+  if (!config.ipfsProvider) return;
+  const provider = validateIpfsProvider(config.ipfsProvider);
+  if (provider === 'pinata' && !config.pinataJwt) {
+    exitWithError('PINATA_JWT env var required when using --ipfs pinata');
+  }
+  if (provider === 'filecoinPin' && !config.filecoinPrivateKey) {
+    exitWithError('FILECOIN_PRIVATE_KEY env var required when using --ipfs filecoinPin');
+  }
+  if (provider === 'node' && !config.ipfsNodeUrl) {
+    exitWithError('--ipfs-node-url or IPFS_NODE_URL env var required when using --ipfs node');
+  }
 }
 
 export async function submitAndWait<T>(

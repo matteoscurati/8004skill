@@ -129,7 +129,8 @@ Every script imports from `shared.ts`. It provides:
 |--------|---------|
 | `parseArgs()` | Converts `--flag value` argv into `Record<string, string>`. Boolean flags (no value) become `"true"`. |
 | `requireArg(args, key, label)` | Exits with error if `args[key]` is missing. Returns the value. |
-| `parseChainId(raw, fallback)` | Parses chain ID string to number. Default fallback: `11155111` (Sepolia). |
+| `parseChainId(raw)` | Parses chain ID string to number. Exits if invalid. |
+| `requireChainId(raw)` | Exits if `raw` is undefined, then delegates to `parseChainId`. Used by all scripts that need a mandatory `--chain-id`. |
 | `validateAgentId(id)` | Validates `chainId:tokenId` format via regex `/^\d+:\d+$/`. |
 | `validateAddress(addr, name)` | Validates `0x`-prefixed 40-hex-char Ethereum address. |
 | `validateIpfsProvider(raw)` | Validates against allowed set: `pinata`, `filecoinPin`, `node`. |

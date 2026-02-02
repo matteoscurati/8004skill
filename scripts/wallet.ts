@@ -26,7 +26,6 @@ import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
-  parseChainId,
   requireChainId,
   validateAgentId,
   validateAddress,
@@ -47,17 +46,15 @@ async function main() {
   const agentId = requireArg(args, 'agent-id', 'agent');
   validateAgentId(agentId);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
+  const chainId = requireChainId(args['chain-id']);
 
   if (action === 'get') {
-    const chainId = parseChainId(args['chain-id']);
     const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
     const agent = await sdk.loadAgent(agentId);
     const wallet = await agent.getWallet();
     outputJson({ agentId, walletAddress: wallet || null, action: 'get' });
     return;
   }
-
-  const chainId = requireChainId(args['chain-id']);
   const walletProvider = await loadWalletProvider(chainId);
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, walletProvider, ...getOverridesFromEnv(chainId) }));
   const agent = await sdk.loadAgent(agentId);

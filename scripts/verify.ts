@@ -21,7 +21,6 @@ import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
-  parseChainId,
   requireChainId,
   validateAgentId,
   validateSignature,
@@ -66,9 +65,9 @@ async function main() {
   const agentId = requireArg(args, 'agent-id', 'agent');
   validateAgentId(agentId);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
+  const chainId = requireChainId(args['chain-id']);
 
   if (action === 'sign') {
-    const chainId = requireChainId(args['chain-id']);
     const walletProvider = await loadWalletProvider(chainId);
     const signerAddress = getConnectedAddress(walletProvider);
 
@@ -96,7 +95,6 @@ async function main() {
       walletMatch: onChainWallet ? signerAddress.toLowerCase() === onChainWallet.toLowerCase() : false,
     });
   } else if (action === 'verify') {
-    const chainId = parseChainId(args['chain-id']);
     const signature = requireArg(args, 'signature', 'signature to verify');
     validateSignature(signature);
     const message = requireArg(args, 'message', 'signed message');

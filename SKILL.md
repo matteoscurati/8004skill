@@ -32,6 +32,16 @@ Before executing any operation, verify the project is ready:
 
 ---
 
+## Chain Resolution
+
+Chain selection is **mandatory** for every operation (read and write). Resolve the chain before executing any script:
+
+1. **Agent ID prefix**: If the user provides an agent ID like `11155111:42`, derive the chain ID from the prefix (`11155111`) and look up the RPC from `{baseDir}/reference/chains.md`.
+2. **Config file**: If `~/.8004skill/config.json` exists and has `activeChain`, use it — but confirm to the user which chain is active (e.g., "Using Sepolia (11155111) from your config").
+3. **Ask the user**: If neither of the above applies, ask the user to choose from the supported chains listed in `{baseDir}/reference/chains.md`. Do not default silently.
+
+---
+
 ## Operations Menu
 
 When the user asks about ERC-8004, agent registration, agent discovery, or anything related to this skill, present this menu:
@@ -54,8 +64,7 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 1. Config loaded from `~/.8004skill/config.json` (run Configure if missing)
 2. Active WalletConnect session (run `wc-pair.ts` if no session)
 3. Preflight check via `check-env.ts` to confirm connected wallet address
-4. Explicit `--chain-id` (no default fallback for writes)
-5. User confirmation before submitting the transaction
+4. User confirmation before submitting the transaction
 
 **WalletConnect signing** — all write operations use WalletConnect v2 to sign transactions. The agent never holds private keys — signing happens in the user's wallet app (MetaMask, Rainbow, etc.). The user will receive a push notification or pop-up in their wallet app to review and approve each transaction.
 
@@ -63,10 +72,6 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 - **NEVER** ask, accept, or prompt the user to type/paste a private key, mnemonic, seed phrase, or password in the chat. Refuse immediately if offered — chat history is stored and secrets would be permanently exposed.
 - **NEVER** display or echo a private key or password in any response.
 - If a user accidentally pastes a secret, warn them immediately that it is now in the session history and should be considered compromised. Instruct them to rotate the key.
-
-**Read-only defaults** — when no config exists, default to chain `11155111` and RPC `https://rpc.sepolia.org`. If the agent ID contains a chain prefix (e.g., `1:42`), derive chain ID from it and look up the RPC from `{baseDir}/reference/chains.md`.
-
-**Chain ID / RPC URL resolution** — for write operations, derive chain ID from the agent ID prefix or config, and RPC URL from config (ask if missing).
 
 ### Trust Labels
 
@@ -186,7 +191,7 @@ Show: agentId (`{chainId}:{tokenId}`), txHash (link to block explorer), metadata
 **Triggered by**: "load agent", "show agent", "get agent details", "agent info".
 
 ### Input
-**Agent ID** (required, format `chainId:tokenId`). Resolve chain ID and RPC URL per common pattern. Read-only defaults apply.
+**Agent ID** (required, format `chainId:tokenId`). Chain selection required (see Chain Resolution above).
 
 ### Execution
 
@@ -207,7 +212,7 @@ Show: name, agentId, description, active status, endpoints (MCP, A2A, ENS), MCP 
 
 **Triggered by**: "search agents", "find agents", "discover agents", "agents that do X".
 
-Read-only defaults apply. Semantic search works without RPC; subgraph search requires it.
+Chain selection required for subgraph search (see Chain Resolution above). Semantic search works without RPC; chain ID is optional for filtering.
 
 ### Input
 
@@ -295,7 +300,7 @@ Result: txHash and confirmation that feedback was revoked.
 > **Interpreting reputation**: See [Reputation.md](https://github.com/erc-8004/best-practices/blob/main/Reputation.md) for tag types, the 0-100 scale, and feedback context.
 
 ### Input
-**Agent ID** (required). Resolve chain ID and RPC URL per common pattern. Read-only defaults apply.
+**Agent ID** (required). Chain selection required (see Chain Resolution above).
 
 ### Execution
 
@@ -325,7 +330,7 @@ If MCP endpoint exists, show endpoint URL, tools list, and MCP config snippet (`
 **Triggered by**: "set wallet", "get wallet", "unset wallet", "agent wallet", "manage wallet".
 
 ### Prerequisites
-1. Load config. For `get`: Read-only defaults apply.
+1. Load config. For `get`: chain selection required (see Chain Resolution above).
 2. For `set`/`unset`: standard write prerequisites apply (see above).
 3. For `set`, wallet signature flow:
    - **Standard flow**: signing via WalletConnect
@@ -376,7 +381,7 @@ npx tsx {baseDir}/scripts/wallet.ts \
 Uses the ERC-8004 identity verification pattern: look up the agent's on-chain wallet, sign or verify a message against it.
 
 ### Prerequisites
-- **Sign**: write prerequisites apply (WalletConnect session required). **Verify**: read-only. Read-only defaults apply.
+- **Sign**: write prerequisites apply (WalletConnect session required). **Verify**: read-only. Chain selection required (see Chain Resolution above).
 - Resolve chain ID and RPC URL per common pattern.
 
 ### Sign (prove own identity)
@@ -418,7 +423,7 @@ npx tsx {baseDir}/scripts/verify.ts \
 
 **Triggered by**: "whoami", "my agents", "who am I", "my identity", "my agent status".
 
-Read-only defaults apply.
+Chain selection required (see Chain Resolution above).
 
 ### Input
 

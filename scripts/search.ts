@@ -12,6 +12,7 @@ import type { SearchParams, SearchOptions } from 'agent0-sdk';
 import {
   parseArgs,
   parseChainId,
+  requireChainId,
   buildSdkConfig,
   getOverridesFromEnv,
   fetchWithRetry,
@@ -75,7 +76,7 @@ async function semanticSearch(
 }
 
 async function subgraphSearch(args: Record<string, string>) {
-  const chainId = parseChainId(args['chain-id']);
+  const chainId = requireChainId(args['chain-id']);
   const rpcUrl = args['rpc-url'];
 
   if (!rpcUrl) {

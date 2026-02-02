@@ -12,7 +12,7 @@ import { initWalletConnectProvider, getConnectedAddress } from './lib/walletconn
 
 async function main() {
   const args = parseArgs();
-  const chainId = parseChainId(args['chain-id']);
+  const chainId = parseChainId(args['chain-id'] || '11155111');
 
   const provider = await initWalletConnectProvider({ chainId });
   const address = getConnectedAddress(provider);
