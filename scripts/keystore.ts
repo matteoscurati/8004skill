@@ -113,9 +113,9 @@ async function actionImport(label: string): Promise<void> {
   const charClasses = [/[A-Z]/, /[a-z]/, /\d/, /[^A-Za-z0-9]/].filter((re) => re.test(password)).length;
 
   if (uniqueChars <= 4 || charClasses < 2) {
-    stderr.write(
-      'WARNING: Weak password detected. For better security, use a mix of uppercase, ' +
-        'lowercase, digits, and symbols with more character variety.\n',
+    exitWithError(
+      'Password too weak: use at least 5 unique characters and 2 character classes ' +
+        '(uppercase, lowercase, digits, symbols).',
     );
   }
 
@@ -151,6 +151,10 @@ async function actionImport(label: string): Promise<void> {
 }
 
 async function actionExport(label: string): Promise<void> {
+  if (!stdin.isTTY) {
+    exitWithError('Export requires an interactive terminal (stdin is not a TTY).');
+  }
+
   const { entry } = requireKeystoreEntry(label);
 
   stderr.write('WARNING: This will display your private key in plaintext.\n');

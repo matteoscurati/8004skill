@@ -56,6 +56,16 @@ When the user asks about ERC-8004, agent registration, agent discovery, or anyth
 3. Explicit `--chain-id` (no default fallback for writes)
 4. User confirmation before submitting the transaction
 
+**Env var security** — `PRIVATE_KEY`, `KEYSTORE_PASSWORD`, and `WALLET_PRIVATE_KEY` must be set in the environment before invoking the skill (e.g., via shell `export`, `.env` file, or OpenClaw skill config `env` field). **Never** pass them as inline command prefixes (`VAR=value npx tsx ...`) because command strings may appear in process logs, session history, and exec approval UIs.
+
+**Keystore CLI** — `keystore.ts` is an interactive CLI for direct user use only. Claude must **never** invoke `keystore.ts`. If the user needs to manage keystore entries, instruct them to run the command themselves in their terminal.
+
+**Secret handling (mandatory):**
+- **NEVER** ask, accept, or prompt the user to type/paste a private key, mnemonic, seed phrase, or password in the chat. Refuse immediately if offered — chat history is stored and secrets would be permanently exposed.
+- **NEVER** display or echo a private key or password in any response.
+- If a user accidentally pastes a secret, warn them immediately that it is now in the session history and should be considered compromised. Instruct them to rotate the key.
+- In **OpenClaw** environments: all secrets must be pre-configured via the skill config `env` field. If secrets are missing and a write operation is requested, instruct the user to exit, configure secrets in the skill settings, and start a new session. Never suggest workarounds.
+
 **Read-only defaults** — when no config exists, default to chain `11155111` and RPC `https://rpc.sepolia.org`. If the agent ID contains a chain prefix (e.g., `1:42`), derive chain ID from it and look up the RPC from `{baseDir}/reference/chains.md`.
 
 **Chain ID / RPC URL resolution** — for write operations, derive chain ID from the agent ID prefix or config, and RPC URL from config (ask if missing).
@@ -144,7 +154,7 @@ Show: Chain, Signer, Name, Description, MCP endpoint, A2A endpoint, OASF Skills,
 ### Execution
 
 ```
-PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/register.ts \
+npx tsx {baseDir}/scripts/register.ts \
   --chain-id <chainId> --rpc-url <rpcUrl> --name "<name>" --description "<description>" \
   --ipfs <provider> [--pinata-jwt "$PINATA_JWT"] [--mcp-endpoint <url>] [--a2a-endpoint <url>] \
   [--active true|false] [--image <url>] [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
@@ -243,7 +253,7 @@ Show: Target Agent, Rating, Tags, Text, Signer, Chain. Ask: "Submit this feedbac
 ### Execution
 
 ```
-PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/feedback.ts \
+npx tsx {baseDir}/scripts/feedback.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --value <value> \
   [--tag1 <tag>] [--tag2 <tag>] [--text "<text>"] [--ipfs <provider>] [--pinata-jwt "$PINATA_JWT"]
 ```
@@ -256,7 +266,7 @@ Show: txHash, reviewer address, rating submitted, tags.
 Input: **Agent ID** and **Feedback index** (0-based). Confirm before executing.
 
 ```
-PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/feedback.ts \
+npx tsx {baseDir}/scripts/feedback.ts \
   --action revoke --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --feedback-index <index>
 ```
 
@@ -326,14 +336,14 @@ Show: Action, Agent, Wallet address (for set), Signer, Flow type. Ask: "Proceed?
 
 **Set:**
 ```
-PRIVATE_KEY="$PRIVATE_KEY" [WALLET_PRIVATE_KEY="$WALLET_PRIVATE_KEY"] npx tsx {baseDir}/scripts/wallet.ts \
+npx tsx {baseDir}/scripts/wallet.ts \
   --action set --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> \
   --wallet-address <address> [--signature <eip712Signature>]
 ```
 
 **Unset:**
 ```
-PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/wallet.ts \
+npx tsx {baseDir}/scripts/wallet.ts \
   --action unset --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl>
 ```
 
@@ -367,7 +377,7 @@ Uses the ERC-8004 identity verification pattern: look up the agent's on-chain wa
 
 **Execution:**
 ```
-PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/verify.ts \
+npx tsx {baseDir}/scripts/verify.ts \
   --action sign --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> [--message "<message>"]
 ```
 
@@ -452,7 +462,7 @@ Show what will change (old → new). Ask to proceed.
 ### Execution
 
 ```
-PRIVATE_KEY="$PRIVATE_KEY" npx tsx {baseDir}/scripts/update-agent.ts \
+npx tsx {baseDir}/scripts/update-agent.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --ipfs <provider> \
   [--pinata-jwt "$PINATA_JWT"] [--name "<newName>"] [--description "<newDescription>"] \
   [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \

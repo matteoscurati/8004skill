@@ -1,5 +1,5 @@
 import { randomBytes, pbkdf2Sync, createCipheriv, createDecipheriv } from 'node:crypto';
-import { existsSync, readFileSync, mkdirSync, chmodSync, lstatSync, openSync, writeSync, closeSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, chmodSync, lstatSync, fstatSync, openSync, writeSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -58,6 +58,13 @@ export function keystoreExists(): boolean {
 function checkNotSymlink(path: string): void {
   if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
     throw new Error(`Refusing to operate on symlink: ${path}`);
+  }
+}
+
+function requireOwnedByCurrentUser(stat: { uid: number }, path: string): void {
+  const uid = process.getuid?.();
+  if (uid !== undefined && stat.uid !== uid) {
+    throw new Error(`Refusing to operate: ${path} is not owned by current user (uid ${uid}).`);
   }
 }
 
@@ -125,10 +132,21 @@ export function saveKeystoreFile(ks: KeystoreFile): void {
     mkdirSync(KEYSTORE_DIR, { recursive: true });
     chmodSync(KEYSTORE_DIR, 0o700);
   }
+
+  checkNotSymlink(KEYSTORE_DIR);
+  requireOwnedByCurrentUser(lstatSync(KEYSTORE_DIR), KEYSTORE_DIR);
+
   const path = getKeystorePath();
   checkNotSymlink(path);
+
   const fd = openSync(path, 'w', 0o600);
   try {
+    // fstat on the opened fd eliminates TOCTOU between checkNotSymlink and write
+    const fdStat = fstatSync(fd);
+    if (!fdStat.isFile()) {
+      throw new Error(`Refusing to write: ${path} is not a regular file.`);
+    }
+    requireOwnedByCurrentUser(fdStat, path);
     writeSync(fd, JSON.stringify(ks, null, 2));
   } finally {
     closeSync(fd);

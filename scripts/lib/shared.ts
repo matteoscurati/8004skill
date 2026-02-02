@@ -16,20 +16,16 @@ function cleanupEnvSecrets(): void {
   }
 }
 
-/**
- * Security initialization for scripts that handle private keys.
- * Clears the CORE_PATTERN env var (defense-in-depth against core dumps)
- * and installs signal handlers that wipe sensitive env vars on interruption.
- */
+/** Call at startup in write scripts to wipe sensitive env vars on interruption. */
 export function initSecurityHardening(): void {
   delete process.env.CORE_PATTERN;
 
-  const cleanup = () => {
+  function onSignal(): never {
     cleanupEnvSecrets();
     process.exit(130);
-  };
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
+  }
+  process.on('SIGINT', onSignal);
+  process.on('SIGTERM', onSignal);
 }
 
 // ── CLI argument parsing ────────────────────────────────────────────
@@ -229,11 +225,63 @@ export function getOverridesFromEnv(chainId: number): {
   return result;
 }
 
+// ── Config validation ────────────────────────────────────────────────
+
+/**
+ * Known public RPC endpoints per chain ID (from reference/chains.md).
+ * Used to warn when the configured RPC doesn't match any known default.
+ */
+const KNOWN_RPC_URLS: Record<number, string[]> = {
+  1: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'],
+  11155111: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
+  84532: ['https://sepolia.base.org'],
+  59141: ['https://rpc.sepolia.linea.build'],
+  80002: ['https://rpc-amoy.polygon.technology'],
+};
+
+export interface ConfigWarning {
+  field: string;
+  message: string;
+}
+
+/**
+ * Validate a loaded config object and return warnings (non-blocking).
+ */
+export function validateConfig(config: { activeChain?: number; rpcUrl?: string }): ConfigWarning[] {
+  const warnings: ConfigWarning[] = [];
+
+  if (config.rpcUrl) {
+    if (config.rpcUrl.startsWith('http://')) {
+      warnings.push({
+        field: 'rpcUrl',
+        message: `RPC URL uses unencrypted HTTP (${config.rpcUrl}). Signed transactions may be intercepted. Use HTTPS.`,
+      });
+    }
+
+    if (config.activeChain !== undefined) {
+      const knownUrls = KNOWN_RPC_URLS[config.activeChain];
+      if (knownUrls && !knownUrls.includes(config.rpcUrl)) {
+        warnings.push({
+          field: 'rpcUrl',
+          message: `RPC URL (${config.rpcUrl}) does not match known public endpoints for chain ${config.activeChain}. ` +
+            `Known: ${knownUrls.join(', ')}. If this is a custom or private RPC, this warning can be ignored.`,
+        });
+      }
+    }
+  }
+
+  return warnings;
+}
+
 // ── Private key resolution ──────────────────────────────────────────
 
 export function loadPrivateKey(envVarName = 'PRIVATE_KEY'): string {
   const fromEnv = process.env[envVarName];
-  if (fromEnv) return fromEnv;
+  if (fromEnv) {
+    // Reduce /proc/pid/environ exposure window
+    delete process.env[envVarName];
+    return fromEnv;
+  }
 
   if (!keystoreExists()) {
     exitWithError(
