@@ -103,6 +103,7 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
 
 2. **Ask which chain** to use. Show supported chains from `{baseDir}/reference/chains.md`:
    - Ethereum Mainnet (1) — full SDK support
+   - Polygon Mainnet (137) — full SDK support
    - Ethereum Sepolia (11155111) — full SDK support, recommended for testing
    - Base Sepolia (84532), Linea Sepolia (59141), Polygon Amoy (80002), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Sepolia (1351057110) — all require env var overrides
 
@@ -221,7 +222,8 @@ Chain selection required for subgraph search (see Chain Resolution above). Seman
 
 1. **Search query** (natural language) - semantic search
 2. Or **structured filters**: name substring, MCP-only / A2A-only, active only, specific chain or all chains
-3. **Result limit** (default: 10)
+3. **Advanced filters** (optional): OASF skills/domains (`--oasf-skills`, `--oasf-domains`), has OASF (`--has-oasf`), has web endpoint (`--has-web`), keyword (`--keyword`), sort (`--sort "field:dir"`), cursor pagination (`--cursor`)
+4. **Result limit** (default: 10)
 
 ### Execution
 
@@ -232,7 +234,7 @@ npx tsx {baseDir}/scripts/search.ts --query "<query>" [--chain-id <chainId>] [--
 
 **Subgraph search** (structured filters, requires RPC):
 ```
-npx tsx {baseDir}/scripts/search.ts --chain-id <chainId> --rpc-url <rpcUrl> [--name "<name>"] [--mcp-only] [--a2a-only] [--active true] [--chains all] [--limit <n>]
+npx tsx {baseDir}/scripts/search.ts --chain-id <chainId> --rpc-url <rpcUrl> [--name "<name>"] [--mcp-only] [--a2a-only] [--active true] [--chains all] [--has-oasf true] [--oasf-skills "slug1,slug2"] [--oasf-domains "slug1,slug2"] [--has-web true] [--keyword "text"] [--sort "name:asc"] [--cursor "abc"] [--limit <n>]
 ```
 
 ### Result
@@ -288,6 +290,18 @@ npx tsx {baseDir}/scripts/feedback.ts \
 
 Result: txHash and confirmation that feedback was revoked.
 
+### Respond to Feedback
+
+Input: **Agent ID**, **Client Address** (reviewer), **Feedback Index** (0-based), **Response URI** (IPFS or HTTP), **Response Hash** (content hash). Confirm before executing.
+
+```
+npx tsx {baseDir}/scripts/respond-feedback.ts \
+  --agent-id <agentId> --client-address <reviewerAddress> --feedback-index <index> \
+  --response-uri <uri> --response-hash <hash> --chain-id <chainId> --rpc-url <rpcUrl>
+```
+
+Result: txHash, agentId, feedbackIndex, responseUri.
+
 ### Error Handling
 - "insufficient funds": Need gas tokens.
 - Value out of range: Must be -100 to 100.
@@ -318,7 +332,7 @@ npx tsx {baseDir}/scripts/reputation.ts --agent-id <agentId> --chain-id <chainId
 
 ### Result
 
-Show: agent name/ID, active status, trust label with rating (e.g., "🟢 Trusted — 82/100 (15 reviews)"), recent feedback table (Reviewer, Rating, Tags, Text).
+Show: agent name/ID, active status, trust label with rating (e.g., "🟢 Trusted — 82/100 (15 reviews)"), recent feedback table (Reviewer, Rating, Tags, Text). Also show timestamps (createdAt, updatedAt, lastActivity) when available, OASF skills/domains, and web/email endpoints.
 
 If MCP endpoint exists, show endpoint URL, tools list, and MCP config snippet (`{"mcpServers":{"<name>":{"url":"<endpoint>"}}}`). If A2A endpoint exists, show agent card URL and skills.
 
@@ -455,7 +469,7 @@ Present as a single card:
 - **Trust**: {trustLabel}
 - **Wallet**: {address} or "not set"
 - **Owners**: {owners}
-- **Endpoints**: MCP yes/no, A2A yes/no
+- **Endpoints**: MCP `<url>` / none, A2A `<url>` / none, Web `<url>` / none
 - **Identity Proof**: if signed, "Verified (wallet match: {walletMatch})"; otherwise "Not signed (connect wallet via wc-pair.ts to prove ownership)"
 
 ### Error Handling
