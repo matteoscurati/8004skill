@@ -11,9 +11,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run typecheck    # Type-check without emitting (tsc --noEmit)
 npm run build        # Compile to dist/ (tsc)
+npm test             # Run tests (vitest)
+npm run test:watch   # Run tests in watch mode
 ```
 
-Scripts are executed at runtime via `npx tsx scripts/<script>.ts --flag value` (`tsx` is a devDependency; run `npm install` first). There are no tests or linters configured.
+Scripts are executed at runtime via `npx tsx scripts/<script>.ts --flag value` (`tsx` is a devDependency; run `npm install` first).
 
 ## Architecture
 

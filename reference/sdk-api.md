@@ -38,6 +38,7 @@ sdk.getFeedback(agentId, clientAddress, feedbackIndex): Promise<Feedback>
 sdk.searchFeedback(filters: FeedbackSearchFilters, options?: FeedbackSearchOptions): Promise<Feedback[]>
 sdk.revokeFeedback(agentId, feedbackIndex): Promise<TransactionHandle<Feedback>>
 sdk.appendResponse(agentId, clientAddress, feedbackIndex, { uri, hash }): Promise<TransactionHandle<Feedback>>
+sdk.prepareFeedbackFile(input: { text?, capability?, name?, skill?, task? }): FeedbackFileInput
 sdk.getReputationSummary(agentId, tag1?, tag2?): Promise<{ count: number, averageValue: number }>
 
 // Ownership

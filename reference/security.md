@@ -81,3 +81,4 @@ Sensitive variables (`PINATA_JWT`, `FILECOIN_PRIVATE_KEY`) should **never** be h
 | `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
 | `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
 | `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
+| `DEBUG` | Debugging (optional) | Set to `1` to enable verbose stack traces and debug logging |

@@ -170,7 +170,7 @@ Show: Chain, Signer, Name, Description, MCP endpoint, A2A endpoint, OASF Skills,
 ```
 npx tsx {baseDir}/scripts/register.ts \
   --chain-id <chainId> --rpc-url <rpcUrl> --name "<name>" --description "<description>" \
-  --ipfs <provider> [--pinata-jwt "$PINATA_JWT"] [--mcp-endpoint <url>] [--a2a-endpoint <url>] \
+  --ipfs <provider> [--mcp-endpoint <url>] [--a2a-endpoint <url>] \
   [--active true|false] [--image <url>] [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
   [--validate-oasf true|false] [--x402 true]
 ```
@@ -273,7 +273,7 @@ Show: Target Agent, Rating, Tags, Text, Signer, Chain. Ask: "Submit this feedbac
 ```
 npx tsx {baseDir}/scripts/feedback.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --value <value> \
-  [--tag1 <tag>] [--tag2 <tag>] [--text "<text>"] [--ipfs <provider>] [--pinata-jwt "$PINATA_JWT"]
+  [--tag1 <tag>] [--tag2 <tag>] [--text "<text>"] [--ipfs <provider>]
 ```
 
 ### Result
@@ -498,7 +498,7 @@ Show what will change (old → new). Ask to proceed.
 ```
 npx tsx {baseDir}/scripts/update-agent.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --ipfs <provider> \
-  [--pinata-jwt "$PINATA_JWT"] [--name "<newName>"] [--description "<newDescription>"] \
+  [--name "<newName>"] [--description "<newDescription>"] \
   [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
   [--remove-mcp] [--remove-a2a] [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
   [--remove-skills "slug1,slug2"] [--remove-domains "slug1,slug2"] \

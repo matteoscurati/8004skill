@@ -14,7 +14,7 @@
 
 ### Install
 
-See [README.md](../README.md#installation) for installation steps (automated and manual).
+Run `./install.sh` from the repo root. The installer detects Claude Code, creates the symlink to `~/.claude/skills/`, and runs `npm install`.
 
 ### How it works
 
@@ -60,7 +60,7 @@ Write operations use WalletConnect v2 — no private keys in the environment. Th
 
 ### Install
 
-See [README.md](../README.md#installation) for installation steps (automated and manual).
+Run `./install.sh` from the repo root. The installer detects OpenClaw, creates the symlink to `~/.openclaw/skills/`, and runs `npm install`.
 
 ### How it works
 

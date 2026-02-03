@@ -109,7 +109,8 @@ scripts/
   load-agent.ts      # Load agent details
   update-agent.ts    # Update agent metadata
   search.ts          # Semantic + subgraph search
-  feedback.ts        # Submit feedback on-chain
+  feedback.ts        # Submit/revoke feedback on-chain
+  respond-feedback.ts # Respond to feedback on-chain
   reputation.ts      # Reputation summary + feedback list
   connect.ts         # Agent discovery and inspection
   wallet.ts          # EIP-712 wallet management
@@ -127,20 +128,30 @@ Every script imports from `shared.ts`. It provides:
 
 | Export | Purpose |
 |--------|---------|
+| `SCRIPT_VERSION` | Version constant for script identification. |
 | `parseArgs()` | Converts `--flag value` argv into `Record<string, string>`. Boolean flags (no value) become `"true"`. |
 | `requireArg(args, key, label)` | Exits with error if `args[key]` is missing. Returns the value. |
 | `parseChainId(raw)` | Parses chain ID string to number. Exits if invalid. |
 | `requireChainId(raw)` | Exits if `raw` is undefined, then delegates to `parseChainId`. Used by all scripts that need a mandatory `--chain-id`. |
 | `validateAgentId(id)` | Validates `chainId:tokenId` format via regex `/^\d+:\d+$/`. |
 | `validateAddress(addr, name)` | Validates `0x`-prefixed 40-hex-char Ethereum address. |
+| `validateSignature(sig)` | Validates `0x`-prefixed hex signature format. |
 | `validateIpfsProvider(raw)` | Validates against allowed set: `pinata`, `filecoinPin`, `node`. |
-| `buildSdkConfig(opts)` | Builds `SDKConfig` object from CLI args and env vars. Validates IPFS provider dependencies. Accepts `walletProvider` for write ops. |
+| `parseDecimalInRange(raw, min, max, label)` | Parses and validates a decimal number within a range. |
+| `splitCsv(raw)` | Splits a comma-separated string into a trimmed array. |
+| `buildSdkConfig(opts)` | Builds `SDKConfig` object from CLI args and env vars. Accepts `walletProvider`, `subgraphUrl`, `registryOverrides`. |
+| `getOverridesFromEnv(chainId)` | Reads `SUBGRAPH_URL`, `REGISTRY_ADDRESS_*` from env. Returns SDK override config. |
 | `loadWalletProvider(chainId)` | Restores WalletConnect session or triggers new pairing (QR code). Returns EIP-1193 provider. |
+| `fetchWithRetry(url, init, opts?)` | HTTP fetch with exponential backoff, `Retry-After` header support, and abort signal. |
 | `exitWithError(message, details?)` | Writes JSON error to stderr and calls `process.exit(1)`. |
 | `handleError(err)` | Catch-all for unhandled errors. Delegates to `exitWithError`. |
 | `outputJson(data)` | Writes `JSON.stringify(data, null, 2)` to stdout. |
+| `emitWalletPrompt()` | Emits `{"status":"awaiting_wallet"}` to stderr before a signing request. |
 | `tryCatch(fn)` | Wraps an async call, returns `{ value?, error? }` for non-fatal lookups. |
 | `extractIpfsConfig(args)` | Extracts IPFS provider, Pinata JWT, Filecoin key, and node URL from args/env. |
+| `validateIpfsEnv(config)` | Validates that the required IPFS env var is set before wallet approval. |
+| `validateConfig(config)` | Validates a config object and returns warnings (non-blocking). |
+| `buildAgentDetails(agent, extras?)` | Builds a standardized agent detail object from an Agent or AgentSummary. |
 | `submitAndWait(handle, opts?)` | Logs `{status:'submitted', txHash}` to stderr, waits for mining, returns `{result, txHash}`. |
 
 ### Script Pattern
@@ -204,6 +215,7 @@ Write operations add:
                   | register.ts               |  Mint agent NFT
                   | update-agent.ts           |  Update metadata URI
                   | feedback.ts               |  Submit on-chain feedback
+                  | respond-feedback.ts       |  Respond to feedback
                   | wallet.ts --action set    |  Set wallet
                   | wallet.ts --action unset  |  Unset wallet
                   | verify.ts --action sign   |  Sign identity proof
@@ -229,7 +241,7 @@ loadWalletProvider() -> SDK init with walletProvider -> build tx -> submit ->
 ### Script-specific Notes
 
 - **check-env.ts** -- Only script that does not use `agent0-sdk` SDK class. Reports WalletConnect session status, connected address, and configured env vars.
-- **search.ts** -- Dual-mode: semantic search (POST to `https://search.ag0.xyz/api/v1/search`, no SDK needed) or subgraph search (SDK `searchAgents`). Routes based on presence of `--query` flag.
+- **search.ts** -- Dual-mode: semantic search (POST to `https://agent0-semantic-search.dawid-pisarczyk.workers.dev/api/v1/search`, no SDK needed) or subgraph search (SDK `searchAgents`). Routes based on presence of `--query` flag.
 - **wallet.ts** -- Tri-modal (`--action get|set|unset`). The `set` action signs via WalletConnect, or accepts a `--signature` flag with a pre-generated EIP-712 signature.
 - **update-agent.ts** -- Loads existing agent, applies mutations, re-publishes. Validates at least one mutation flag is present.
 - **connect.ts** -- Combines agent details + reputation summary in a single response. Used for the "Inspect Agent" operation.
@@ -258,7 +270,7 @@ stdout: { agentId: "11155111:42", txHash: "0x...", uri: "ipfs://..." }
 ```
                     Semantic Path                          Subgraph Path
                     -------------                          --------------
---query "..."  ->   POST search.ag0.xyz/api/v1/search     --name "..."  ->  sdk.searchAgents()
+--query "..."  ->   POST semantic search API               --name "..."  ->  sdk.searchAgents()
                     (vector similarity)                    (indexed query via The Graph)
                          |                                       |
                          v                                       v
@@ -347,16 +359,7 @@ The config directory `~/.8004skill/` is created with `chmod 700`. The agent mana
 
 ### Environment Variables
 
-| Variable | Used By | Purpose |
-|----------|---------|---------|
-| `WC_PROJECT_ID` | All write scripts (optional) | WalletConnect project ID. A default is provided if not set. |
-| `PINATA_JWT` | register, update-agent, feedback | JWT for Pinata IPFS pinning |
-| `FILECOIN_PRIVATE_KEY` | register, update-agent, feedback | Private key for Filecoin pinning |
-| `IPFS_NODE_URL` | register, update-agent, feedback | URL of local IPFS node API |
-| `SEARCH_API_URL` | search | Override semantic search endpoint |
-| `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
-| `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
-| `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
+See [reference/security.md](../reference/security.md#environment-variables-reference) for the canonical environment variables table.
 
 ### How Config Flows to Scripts
 
@@ -368,7 +371,7 @@ config.rpcUrl       ->  --rpc-url https://rpc.sepolia.org
 config.ipfs         ->  --ipfs pinata
 ```
 
-Environment variables pass through the process environment directly. Some can also be provided as CLI args (e.g., `--pinata-jwt`), with CLI taking precedence.
+Environment variables (`PINATA_JWT`, `SUBGRAPH_URL`, etc.) pass through the process environment directly to the scripts.
 
 ---
 
@@ -479,6 +482,7 @@ Setting an agent wallet requires a typed signature from the target wallet:
 | Chain | Chain ID | Status |
 |-------|----------|--------|
 | Ethereum Mainnet | 1 | Production |
+| Polygon Mainnet | 137 | Production |
 | Ethereum Sepolia | 11155111 | Testnet (default) |
 | Base Sepolia | 84532 | Testnet |
 | Linea Sepolia | 59141 | Testnet |
@@ -487,7 +491,7 @@ Setting an agent wallet requires a typed signature from the target wallet:
 | HyperEVM Testnet | 998 | Testnet |
 | SKALE Sepolia | 1351057110 | Testnet |
 
-The SDK has built-in defaults for Mainnet and Sepolia. Other chains require `registryOverrides` in SDK config.
+The SDK has built-in defaults for Mainnet (1), Sepolia (11155111), and Polygon (137). Other chains require `registryOverrides` in SDK config.
 
 ---
 

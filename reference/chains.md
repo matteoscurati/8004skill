@@ -25,7 +25,7 @@
 - **Sepolia (11155111)**: `https://gateway.thegraph.com/api/<GRAPH_API_KEY>/subgraphs/id/6wQRC7geo9XYAhckfmfo8kbMRLeWU8KQd3XsJqFKmZLT`
 - **Polygon (137)**: Built-in in SDK (uses SDK's `subgraphOverrides` if custom URL needed)
 
-Set `GRAPH_API_KEY` env var or use the SDK's `subgraphOverrides` config.
+Replace `<GRAPH_API_KEY>` in the URL with your key from [The Graph](https://thegraph.com/studio/). Alternatively, set the full URL via the `SUBGRAPH_URL` env var or the SDK's `subgraphOverrides` config.
 
 ## Public RPC Endpoints
 
