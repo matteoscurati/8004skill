@@ -29,8 +29,7 @@ sdk.loadAgent(agentId: string): Promise<Agent>
 sdk.getAgent(agentId: string): Promise<AgentSummary | null>
 
 // Search
-sdk.searchAgents(filters?: SearchParams, options?: SearchOptions): Promise<{ items: AgentSummary[], nextCursor?: string, meta?: SearchResultMeta }>
-sdk.searchAgentsByReputation(filters?: ReputationSearchFilters, options?: ReputationSearchOptions): Promise<{ items: AgentSummary[], nextCursor?: string }>
+sdk.searchAgents(filters?: SearchFilters, options?: SearchOptions): Promise<{ items: AgentSummary[], nextCursor?: string, meta?: SearchResultMeta }>
 
 // Feedback
 sdk.giveFeedback(agentId, value: number | string, tag1?, tag2?, endpoint?, feedbackFile?): Promise<TransactionHandle<Feedback>>
@@ -38,6 +37,7 @@ sdk.giveFeedback(agentId, value: number | string, tag1?, tag2?, endpoint?, feedb
 sdk.getFeedback(agentId, clientAddress, feedbackIndex): Promise<Feedback>
 sdk.searchFeedback(filters: FeedbackSearchFilters, options?: FeedbackSearchOptions): Promise<Feedback[]>
 sdk.revokeFeedback(agentId, feedbackIndex): Promise<TransactionHandle<Feedback>>
+sdk.appendResponse(agentId, clientAddress, feedbackIndex, { uri, hash }): Promise<TransactionHandle<Feedback>>
 sdk.getReputationSummary(agentId, tag1?, tag2?): Promise<{ count: number, averageValue: number }>
 
 // Ownership
@@ -128,25 +128,85 @@ await handle.waitConfirmed(opts?)  // alias for waitMined()
 }
 ```
 
-## Search Filters (SearchParams)
+## Search Filters (SearchFilters)
 
 ```typescript
 {
   chains?: number[] | 'all',   // Multi-chain search
+  agentIds?: AgentId[],
   name?: string,               // Case-insensitive substring
   description?: string,        // Semantic search
   owners?: Address[],
   operators?: Address[],
-  mcp?: boolean,               // Has MCP endpoint
-  a2a?: boolean,               // Has A2A endpoint
-  ens?: string,                // ENS name (exact)
-  did?: string,                // DID (exact)
+  hasRegistrationFile?: boolean,
+  hasWeb?: boolean,            // Has web endpoint
+  hasMCP?: boolean,            // Has MCP endpoint
+  hasA2A?: boolean,            // Has A2A endpoint
+  hasOASF?: boolean,           // Has OASF skills/domains
+  hasEndpoints?: boolean,      // Has any endpoint
+  webContains?: string,
+  mcpContains?: string,
+  a2aContains?: string,
+  ensContains?: string,
+  didContains?: string,
   walletAddress?: Address,
   supportedTrust?: string[],
   a2aSkills?: string[],
   mcpTools?: string[],
+  mcpPrompts?: string[],
+  mcpResources?: string[],
+  oasfSkills?: string[],       // Filter by OASF skill slugs
+  oasfDomains?: string[],      // Filter by OASF domain slugs
   active?: boolean,
   x402support?: boolean,
+  registeredAtFrom?: Date | string | number,
+  registeredAtTo?: Date | string | number,
+  updatedAtFrom?: Date | string | number,
+  updatedAtTo?: Date | string | number,
+  hasMetadataKey?: string,
+  metadataValue?: { key: string, value: string },
+  keyword?: string,            // Full-text keyword search
+  feedback?: FeedbackFilters,  // Sub-filter for feedback criteria
+}
+```
+
+## SearchOptions
+
+```typescript
+{
+  sort?: string[],             // e.g. ["name:asc", "createdAt:desc"]
+  pageSize?: number,
+  cursor?: string,             // Pagination cursor from nextCursor
+  semanticMinScore?: number,   // Min similarity score for semantic search
+  semanticTopK?: number,       // Max results for semantic pre-filter
+}
+```
+
+## SearchResultMeta
+
+```typescript
+{
+  chains: number[],
+  successfulChains: number[],
+  failedChains: number[],
+  totalResults: number,
+  timing: { totalMs: number, averagePerChainMs?: number },
+}
+```
+
+## FeedbackSearchFilters
+
+```typescript
+{
+  agentId?: AgentId,           // Now optional (was required)
+  agents?: AgentId[],          // Search across multiple agents
+  tags?: string[],
+  reviewers?: Address[],       // Filter by reviewer addresses
+  capabilities?: string[],
+  skills?: string[],
+  tasks?: string[],
+  names?: string[],
+  includeRevoked?: boolean,
 }
 ```
 

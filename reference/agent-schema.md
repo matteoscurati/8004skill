@@ -2,6 +2,8 @@
 
 ## Agent Registration File (IPFS/HTTP metadata)
 
+> **Note**: The ERC-8004 spec uses `services` as the key for endpoints. The SDK accepts both `services` and `endpoints` when reading, and normalizes to `endpoints` internally.
+
 ```json
 {
   "name": "My Agent",
@@ -53,6 +55,8 @@
 
 ## Agent Summary (from subgraph/search)
 
+`mcp` and `a2a` are now endpoint URL strings (not booleans). New fields include `web`, `email`, OASF data, timestamps, and feedback aggregates.
+
 ```json
 {
   "chainId": 11155111,
@@ -62,8 +66,10 @@
   "image": "ipfs://...",
   "owners": ["0x..."],
   "operators": [],
-  "mcp": true,
-  "a2a": false,
+  "mcp": "https://mcp.example.com/sse",
+  "a2a": "https://a2a.example.com/.well-known/agent.json",
+  "web": "https://example.com",
+  "email": "agent@example.com",
   "ens": "myagent.eth",
   "walletAddress": "0x...",
   "supportedTrusts": ["reputation"],
@@ -71,8 +77,18 @@
   "mcpTools": ["tool1"],
   "mcpPrompts": [],
   "mcpResources": [],
+  "oasfSkills": ["natural_language_processing/summarization"],
+  "oasfDomains": ["finance_and_business/investment_services"],
   "active": true,
   "x402support": false,
+  "createdAt": 1706000000,
+  "updatedAt": 1706100000,
+  "lastActivity": 1706200000,
+  "agentURI": "ipfs://Qm...",
+  "agentURIType": "ipfs",
+  "feedbackCount": 15,
+  "averageValue": 82.5,
+  "semanticScore": 0.92,
   "extras": {}
 }
 ```
@@ -92,7 +108,7 @@
   "context": {},
   "fileURI": "ipfs://...",
   "createdAt": 1706000000,
-  "answers": [],
+  "answers": [{ "uri": "ipfs://Qm...", "hash": "0x..." }],
   "isRevoked": false,
   "capability": "tools",
   "name": "tool1"

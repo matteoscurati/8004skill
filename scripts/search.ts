@@ -8,7 +8,7 @@
  */
 
 import { SDK } from 'agent0-sdk';
-import type { SearchParams, SearchOptions } from 'agent0-sdk';
+import type { SearchFilters, SearchOptions } from 'agent0-sdk';
 import {
   parseArgs,
   parseChainId,
@@ -16,6 +16,7 @@ import {
   buildSdkConfig,
   getOverridesFromEnv,
   fetchWithRetry,
+  splitCsv,
   exitWithError,
   handleError,
   outputJson,
@@ -84,17 +85,26 @@ async function subgraphSearch(args: Record<string, string>) {
   }
 
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
-  const filters: SearchParams = {};
+  const filters: SearchFilters = {};
 
   if (args['name']) filters.name = args['name'];
-  if (args['mcp-only'] === 'true') filters.mcp = true;
-  if (args['a2a-only'] === 'true') filters.a2a = true;
+  if (args['mcp-only'] === 'true') filters.hasMCP = true;
+  if (args['a2a-only'] === 'true') filters.hasA2A = true;
   if (args['active'] === 'true') filters.active = true;
   if (args['chains'] === 'all') filters.chains = 'all';
+  if (args['has-oasf'] === 'true') filters.hasOASF = true;
+  if (args['has-web'] === 'true') filters.hasWeb = true;
+  if (args['oasf-skills']) filters.oasfSkills = splitCsv(args['oasf-skills']);
+  if (args['oasf-domains']) filters.oasfDomains = splitCsv(args['oasf-domains']);
+  if (args['keyword']) filters.keyword = args['keyword'];
 
   const pageSize = parseLimit(args['limit']);
 
   const options: SearchOptions = { pageSize };
+  if (args['sort']) {
+    options.sort = splitCsv(args['sort']);
+  }
+  if (args['cursor']) options.cursor = args['cursor'];
   return await sdk.searchAgents(filters, options);
 }
 

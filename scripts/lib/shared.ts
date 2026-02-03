@@ -1,4 +1,5 @@
 import type { SDKConfig } from 'agent0-sdk';
+import type { TransactionHandle, TransactionWaitOptions } from 'agent0-sdk';
 import type EthereumProvider from '@walletconnect/ethereum-provider';
 import { isAddress } from 'viem';
 import { initWalletConnectProvider, getConnectedAddress } from './walletconnect.js';
@@ -221,6 +222,7 @@ export function getOverridesFromEnv(chainId: number): {
  */
 const KNOWN_RPC_URLS: Record<number, string[]> = {
   1: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'],
+  137: ['https://polygon-rpc.com', 'https://rpc.ankr.com/polygon'],
   11155111: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
   84532: ['https://sepolia.base.org'],
   59141: ['https://rpc.sepolia.linea.build'],
@@ -384,8 +386,8 @@ export function validateIpfsEnv(config: IpfsConfig): void {
 }
 
 export async function submitAndWait<T>(
-  handle: { hash: string; waitMined: (opts?: { timeoutMs?: number; confirmations?: number }) => Promise<{ result: T }> },
-  opts?: { timeoutMs?: number; confirmations?: number },
+  handle: TransactionHandle<T>,
+  opts?: TransactionWaitOptions,
 ): Promise<{ result: T; txHash: string }> {
   const txHash = handle.hash;
   console.error(JSON.stringify({ status: 'submitted', txHash }));
