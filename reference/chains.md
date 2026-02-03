@@ -5,6 +5,7 @@
 | Chain | Chain ID | Identity Registry | Reputation Registry | Validation Registry |
 |-------|----------|-------------------|---------------------|---------------------|
 | Ethereum Mainnet | 1 | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` | - |
+| Polygon Mainnet | 137 | Built-in subgraph, registries TBC | Built-in subgraph, registries TBC | - |
 
 ## Testnets
 
@@ -22,12 +23,14 @@
 
 - **Mainnet (1)**: `https://gateway.thegraph.com/api/<GRAPH_API_KEY>/subgraphs/id/FV6RR6y13rsnCxBAicKuQEwDp8ioEGiNaWaZUmvr1F8k`
 - **Sepolia (11155111)**: `https://gateway.thegraph.com/api/<GRAPH_API_KEY>/subgraphs/id/6wQRC7geo9XYAhckfmfo8kbMRLeWU8KQd3XsJqFKmZLT`
+- **Polygon (137)**: Built-in in SDK (uses SDK's `subgraphOverrides` if custom URL needed)
 
 Set `GRAPH_API_KEY` env var or use the SDK's `subgraphOverrides` config.
 
 ## Public RPC Endpoints
 
 - Mainnet: `https://eth.llamarpc.com`, `https://rpc.ankr.com/eth`
+- Polygon: `https://polygon-rpc.com`, `https://rpc.ankr.com/polygon`
 - Sepolia: `https://rpc.sepolia.org`, `https://ethereum-sepolia-rpc.publicnode.com`
 - Base Sepolia: `https://sepolia.base.org`
 - Linea Sepolia: `https://rpc.sepolia.linea.build`
@@ -36,7 +39,7 @@ Set `GRAPH_API_KEY` env var or use the SDK's `subgraphOverrides` config.
 ## Notes
 
 - All contract addresses start with `0x8004` (deployed via CREATE2 with vanity prefix)
-- The SDK has built-in defaults for Mainnet (1) and Sepolia (11155111) only. All other chains require environment variable overrides:
+- The SDK has built-in defaults for Mainnet (1), Sepolia (11155111), and Polygon (137). All other chains require environment variable overrides:
   - `REGISTRY_ADDRESS_IDENTITY` — Identity registry contract address for the active chain
   - `REGISTRY_ADDRESS_REPUTATION` — Reputation registry contract address for the active chain
   - `SUBGRAPH_URL` — Subgraph endpoint for the active chain
