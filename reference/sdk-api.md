@@ -8,14 +8,15 @@ import { SDK } from 'agent0-sdk';
 const sdk = new SDK({
   chainId: number,           // Required: EVM chain ID
   rpcUrl: string,            // Required: RPC endpoint
-  walletProvider?: EIP1193,  // EIP-1193 provider (used by this skill via WalletConnect)
+  walletProvider?: EIP1193Provider,  // EIP-1193 provider (used by this skill via WalletConnect)
   privateKey?: string,       // Hex private key (not used by this skill)
   signer?: string,           // Alias for privateKey (not used by this skill)
   ipfs?: 'pinata' | 'filecoinPin' | 'node',
   pinataJwt?: string,        // Required if ipfs='pinata'
   filecoinPrivateKey?: string, // Required if ipfs='filecoinPin'
   ipfsNodeUrl?: string,      // Required if ipfs='node'
-  subgraphOverrides?: Record<number, string>,
+  subgraphUrl?: string,                          // Subgraph URL for the active chain
+  subgraphOverrides?: Record<number, string>,     // Per-chain subgraph URL overrides
   registryOverrides?: Record<number, Record<string, string>>,
 });
 ```
@@ -29,7 +30,7 @@ sdk.loadAgent(agentId: string): Promise<Agent>
 sdk.getAgent(agentId: string): Promise<AgentSummary | null>
 
 // Search
-sdk.searchAgents(filters?: SearchFilters, options?: SearchOptions): Promise<{ items: AgentSummary[], nextCursor?: string, meta?: SearchResultMeta }>
+sdk.searchAgents(filters?: SearchFilters, options?: SearchOptions): Promise<AgentSummary[]>
 
 // Feedback
 sdk.giveFeedback(agentId, value: number | string, tag1?, tag2?, endpoint?, feedbackFile?): Promise<TransactionHandle<Feedback>>
@@ -116,8 +117,9 @@ agent.getMetadata(): Record<string, unknown>
 ```typescript
 const handle = await agent.registerIPFS();
 handle.hash     // transaction hash (0x...)
-await handle.waitMined(opts?)   // wait for confirmation, returns { result }
+await handle.waitMined(opts?)   // wait for confirmation, returns { result: T }
 await handle.waitConfirmed(opts?)  // alias for waitMined()
+// T is the generic type of TransactionHandle<T> (e.g. RegistrationFile, Feedback)
 ```
 
 ### TransactionWaitOptions
@@ -129,7 +131,29 @@ await handle.waitConfirmed(opts?)  // alias for waitMined()
 }
 ```
 
-## Search Filters (SearchFilters)
+## AgentSummary
+
+Returned by `sdk.searchAgents()` and `sdk.getAgent()`. Contains subgraph data including fields not available on the `Agent` class.
+
+```typescript
+{
+  agentId: string,
+  name: string,
+  description: string,
+  image?: string,
+  mcpEndpoint?: string,
+  a2aEndpoint?: string,
+  ensEndpoint?: string,
+  web?: string,              // Web endpoint URL (not on Agent class)
+  email?: string,            // Email endpoint (not on Agent class)
+  walletAddress?: string,
+  mcpTools?: string[],
+  a2aSkills?: string[],
+  active?: boolean,
+}
+```
+
+## SearchFilters
 
 ```typescript
 {
@@ -176,22 +200,8 @@ await handle.waitConfirmed(opts?)  // alias for waitMined()
 ```typescript
 {
   sort?: string[],             // e.g. ["name:asc", "createdAt:desc"]
-  pageSize?: number,
-  cursor?: string,             // Pagination cursor from nextCursor
   semanticMinScore?: number,   // Min similarity score for semantic search
   semanticTopK?: number,       // Max results for semantic pre-filter
-}
-```
-
-## SearchResultMeta
-
-```typescript
-{
-  chains: number[],
-  successfulChains: number[],
-  failedChains: number[],
-  totalResults: number,
-  timing: { totalMs: number, averagePerChainMs?: number },
 }
 ```
 
@@ -208,6 +218,15 @@ await handle.waitConfirmed(opts?)  // alias for waitMined()
   tasks?: string[],
   names?: string[],
   includeRevoked?: boolean,
+}
+```
+
+## FeedbackSearchOptions
+
+```typescript
+{
+  minValue?: number,
+  maxValue?: number,
 }
 ```
 

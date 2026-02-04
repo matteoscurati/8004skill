@@ -137,7 +137,7 @@ Every script imports from `shared.ts`. It provides:
 | `validateAddress(addr, name)` | Validates `0x`-prefixed 40-hex-char Ethereum address. |
 | `validateSignature(sig)` | Validates `0x`-prefixed hex signature format. |
 | `validateIpfsProvider(raw)` | Validates against allowed set: `pinata`, `filecoinPin`, `node`. |
-| `parseDecimalInRange(raw, min, max, label)` | Parses and validates a decimal number within a range. |
+| `parseDecimalInRange(raw, name, min, max)` | Parses and validates a decimal number within a range. |
 | `splitCsv(raw)` | Splits a comma-separated string into a trimmed array. |
 | `buildSdkConfig(opts)` | Builds `SDKConfig` object from CLI args and env vars. Accepts `walletProvider`, `subgraphUrl`, `registryOverrides`. |
 | `getOverridesFromEnv(chainId)` | Reads `SUBGRAPH_URL`, `REGISTRY_ADDRESS_*` from env. Returns SDK override config. |
@@ -151,7 +151,7 @@ Every script imports from `shared.ts`. It provides:
 | `extractIpfsConfig(args)` | Extracts IPFS provider, Pinata JWT, Filecoin key, and node URL from args/env. |
 | `validateIpfsEnv(config)` | Validates that the required IPFS env var is set before wallet approval. |
 | `validateConfig(config)` | Validates a config object and returns warnings (non-blocking). |
-| `buildAgentDetails(agent, extras?)` | Builds a standardized agent detail object from an Agent or AgentSummary. |
+| `buildAgentDetails(agent, regFile, extras?)` | Builds a standardized agent detail object from an Agent/AgentSummary and its registration file. |
 | `submitAndWait(handle, opts?)` | Logs `{status:'submitted', txHash}` to stderr, waits for mining, returns `{result, txHash}`. |
 
 ### Script Pattern
@@ -463,7 +463,7 @@ Stored on IPFS or HTTP. Contains:
 
 ### Feedback
 
-- Rating value: integer from -100 to 100 (stored as int128 with 2 decimal places on-chain)
+- Rating value: number from -100 to 100, decimals allowed (e.g. 85, 99.77, -3.2; stored as int128 value + uint8 valueDecimals on-chain)
 - Tags: up to 2 free-text tags per feedback entry
 - Text: optional detailed feedback stored on IPFS as a feedback file
 - Endpoint: optional, for endpoint-specific feedback
@@ -483,15 +483,18 @@ Setting an agent wallet requires a typed signature from the target wallet:
 |-------|----------|--------|
 | Ethereum Mainnet | 1 | Production |
 | Polygon Mainnet | 137 | Production |
+| Base | 8453 | Production |
+| BSC | 56 | Production |
+| Monad | 143 | Production |
+| Scroll | 534352 | Production |
+| Gnosis | 100 | Production |
 | Ethereum Sepolia | 11155111 | Testnet (default) |
 | Base Sepolia | 84532 | Testnet |
-| Linea Sepolia | 59141 | Testnet |
-| Polygon Amoy | 80002 | Testnet |
-| Hedera Testnet | 296 | Testnet |
-| HyperEVM Testnet | 998 | Testnet |
-| SKALE Sepolia | 1351057110 | Testnet |
+| BSC Chapel | 97 | Testnet |
+| Monad Testnet | 10143 | Testnet |
+| Scroll Testnet | 534351 | Testnet |
 
-The SDK has built-in defaults for Mainnet (1), Sepolia (11155111), and Polygon (137). Other chains require `registryOverrides` in SDK config.
+The SDK has built-in registry addresses for Mainnet (1) and Sepolia (11155111). Polygon (137) has a built-in subgraph URL but requires registry address overrides. All other chains require `registryOverrides` in SDK config. See `reference/chains.md` for contract addresses, subgraph URLs, and RPC endpoints.
 
 ---
 

@@ -38,13 +38,9 @@ async function semanticSearch(
 ) {
   const filters: { in?: Record<string, unknown[]>; exists?: string[] } = {};
   if (options.chainId) filters.in = { chainId: [options.chainId] };
-  const existsFields = [
-    ...(options.mcpOnly ? ['mcpEndpoint'] : []),
-    ...(options.a2aOnly ? ['a2aEndpoint'] : []),
-  ];
-  if (existsFields.length > 0) filters.exists = existsFields;
+  if (options.mcpOnly) (filters.exists ??= []).push('mcpEndpoint');
+  if (options.a2aOnly) (filters.exists ??= []).push('a2aEndpoint');
 
-  const hasFilters = filters.in !== undefined || filters.exists !== undefined;
   const searchUrl = process.env.SEARCH_API_URL || DEFAULT_SEARCH_URL;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -57,7 +53,7 @@ async function semanticSearch(
       body: JSON.stringify({
         query,
         limit: options.limit || 10,
-        filters: hasFilters ? filters : undefined,
+        ...(filters.in || filters.exists ? { filters } : undefined),
       }),
       signal: controller.signal,
     });
@@ -98,14 +94,19 @@ async function subgraphSearch(args: Record<string, string>) {
   if (args['oasf-domains']) filters.oasfDomains = splitCsv(args['oasf-domains']);
   if (args['keyword']) filters.keyword = args['keyword'];
 
-  const pageSize = parseLimit(args['limit']);
-
-  const options: SearchOptions = { pageSize };
-  if (args['sort']) {
-    options.sort = splitCsv(args['sort']);
+  const options: SearchOptions = {};
+  if (args['sort']) options.sort = splitCsv(args['sort']);
+  if (args['semantic-min-score']) {
+    const score = parseFloat(args['semantic-min-score']);
+    if (Number.isNaN(score)) exitWithError(`Invalid --semantic-min-score: "${args['semantic-min-score']}". Must be a number.`);
+    options.semanticMinScore = score;
   }
-  if (args['cursor']) options.cursor = args['cursor'];
-  return await sdk.searchAgents(filters, options);
+  if (args['semantic-top-k']) {
+    const topK = parseInt(args['semantic-top-k'], 10);
+    if (Number.isNaN(topK) || topK < 1) exitWithError(`Invalid --semantic-top-k: "${args['semantic-top-k']}". Must be a positive integer.`);
+    options.semanticTopK = topK;
+  }
+  return sdk.searchAgents(filters, options);
 }
 
 async function main() {
@@ -114,13 +115,11 @@ async function main() {
   if (args['query']) {
     const chainId = args['chain-id'] ? parseChainId(args['chain-id']) : undefined;
 
-    const limit = args['limit'] ? parseLimit(args['limit']) : undefined;
-
     const result = await semanticSearch(args['query'], {
       chainId,
       mcpOnly: args['mcp-only'] === 'true',
       a2aOnly: args['a2a-only'] === 'true',
-      limit,
+      limit: args['limit'] ? parseLimit(args['limit']) : undefined,
     });
     outputJson(result);
   } else {

@@ -103,12 +103,13 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
 
 2. **Ask which chain** to use. Show supported chains from `{baseDir}/reference/chains.md`:
    - Ethereum Mainnet (1) — full SDK support
-   - Polygon Mainnet (137) — full SDK support
+   - Polygon Mainnet (137) — built-in subgraph, requires registry overrides
+   - Base (8453), BSC (56), Monad (143), Scroll (534352), Gnosis (100) — mainnets, require env var overrides
    - Ethereum Sepolia (11155111) — full SDK support, recommended for testing
-   - Base Sepolia (84532), Linea Sepolia (59141), Polygon Amoy (80002), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Sepolia (1351057110) — all require env var overrides
+   - Base Sepolia (84532), BSC Chapel (97), Monad Testnet (10143), Scroll Testnet (534351) — testnets, require env var overrides
 
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md`.
-   If the chain is NOT Mainnet (1) or Sepolia (11155111): warn that the SDK lacks built-in addresses for this chain. The user must set `REGISTRY_ADDRESS_IDENTITY`, `REGISTRY_ADDRESS_REPUTATION`, and `SUBGRAPH_URL`.
+   If the chain is NOT Mainnet (1) or Sepolia (11155111): warn that the SDK lacks built-in registry addresses for this chain. The user must set `REGISTRY_ADDRESS_IDENTITY` and `REGISTRY_ADDRESS_REPUTATION`. Polygon (137) has a built-in subgraph URL but still requires registry overrides. All other chains also need `SUBGRAPH_URL`.
 
 4. **Ask about IPFS provider** (optional, needed for registration/updates):
    - `pinata` - needs `PINATA_JWT` env var
@@ -222,8 +223,8 @@ Chain selection required for subgraph search (see Chain Resolution above). Seman
 
 1. **Search query** (natural language) - semantic search
 2. Or **structured filters**: name substring, MCP-only / A2A-only, active only, specific chain or all chains
-3. **Advanced filters** (optional): OASF skills/domains (`--oasf-skills`, `--oasf-domains`), has OASF (`--has-oasf`), has web endpoint (`--has-web`), keyword (`--keyword`), sort (`--sort "field:dir"`), cursor pagination (`--cursor`)
-4. **Result limit** (default: 10)
+3. **Advanced filters** (optional): OASF skills/domains (`--oasf-skills`, `--oasf-domains`), has OASF (`--has-oasf`), has web endpoint (`--has-web`), keyword (`--keyword`), sort (`--sort "field:dir"`), semantic tuning (`--semantic-min-score`, `--semantic-top-k`)
+4. **Result limit** (default: 10, semantic search only via `--limit`)
 
 ### Execution
 
@@ -234,7 +235,7 @@ npx tsx {baseDir}/scripts/search.ts --query "<query>" [--chain-id <chainId>] [--
 
 **Subgraph search** (structured filters, requires RPC):
 ```
-npx tsx {baseDir}/scripts/search.ts --chain-id <chainId> --rpc-url <rpcUrl> [--name "<name>"] [--mcp-only] [--a2a-only] [--active true] [--chains all] [--has-oasf true] [--oasf-skills "slug1,slug2"] [--oasf-domains "slug1,slug2"] [--has-web true] [--keyword "text"] [--sort "name:asc"] [--cursor "abc"] [--limit <n>]
+npx tsx {baseDir}/scripts/search.ts --chain-id <chainId> --rpc-url <rpcUrl> [--name "<name>"] [--mcp-only] [--a2a-only] [--active true] [--chains all] [--has-oasf true] [--oasf-skills "slug1,slug2"] [--oasf-domains "slug1,slug2"] [--has-web true] [--keyword "text"] [--sort "name:asc"] [--semantic-min-score 0.7] [--semantic-top-k 50]
 ```
 
 ### Result
@@ -273,7 +274,9 @@ Show: Target Agent, Rating, Tags, Text, Signer, Chain. Ask: "Submit this feedbac
 ```
 npx tsx {baseDir}/scripts/feedback.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --value <value> \
-  [--tag1 <tag>] [--tag2 <tag>] [--text "<text>"] [--ipfs <provider>]
+  [--tag1 <tag>] [--tag2 <tag>] [--text "<text>"] [--endpoint <url>] \
+  [--capability <cap>] [--tool-name <tool>] [--skill <skill>] [--task <task>] \
+  [--ipfs <provider>]
 ```
 
 ### Result
@@ -332,7 +335,7 @@ npx tsx {baseDir}/scripts/reputation.ts --agent-id <agentId> --chain-id <chainId
 
 ### Result
 
-Show: agent name/ID, active status, trust label with rating (e.g., "🟢 Trusted — 82/100 (15 reviews)"), recent feedback table (Reviewer, Rating, Tags, Text). Also show timestamps (createdAt, updatedAt, lastActivity) when available, OASF skills/domains, and web/email endpoints.
+Show: agent name/ID, active status, trust label with rating (e.g., "🟢 Trusted — 82/100 (15 reviews)"), recent feedback table (Reviewer, Rating, Tags, Text). Also show OASF skills/domains and web/email endpoints when available from search results.
 
 If MCP endpoint exists, show endpoint URL, tools list, and MCP config snippet (`{"mcpServers":{"<name>":{"url":"<endpoint>"}}}`). If A2A endpoint exists, show agent card URL and skills.
 
@@ -399,7 +402,6 @@ Uses the ERC-8004 identity verification pattern: look up the agent's on-chain wa
 
 ### Prerequisites
 - **Sign**: write prerequisites apply (WalletConnect session required). **Verify**: read-only. Chain selection required (see Chain Resolution above).
-- Resolve chain ID and RPC URL per common pattern.
 
 ### Sign (prove own identity)
 
@@ -498,9 +500,10 @@ Show what will change (old → new). Ask to proceed.
 ```
 npx tsx {baseDir}/scripts/update-agent.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --ipfs <provider> \
-  [--name "<newName>"] [--description "<newDescription>"] \
+  [--name "<newName>"] [--description "<newDescription>"] [--image <url>] \
   [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
   [--remove-mcp] [--remove-a2a] [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
   [--remove-skills "slug1,slug2"] [--remove-domains "slug1,slug2"] \
-  [--validate-oasf true|false] [--x402 true|false] [--metadata '{"key":"value"}'] [--del-metadata "key1,key2"]
+  [--validate-oasf true|false] [--x402 true|false] [--metadata '{"key":"value"}'] [--del-metadata "key1,key2"] \
+  [--http-uri <uri>]
 ```

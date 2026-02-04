@@ -1,5 +1,4 @@
-import type { SDKConfig } from 'agent0-sdk';
-import type { TransactionHandle, TransactionWaitOptions } from 'agent0-sdk';
+import type { SDKConfig, TransactionHandle, TransactionWaitOptions } from 'agent0-sdk';
 import type EthereumProvider from '@walletconnect/ethereum-provider';
 import { isAddress } from 'viem';
 import { initWalletConnectProvider, getConnectedAddress } from './walletconnect.js';
@@ -161,18 +160,20 @@ export function buildSdkConfig(opts: {
     const provider = validateIpfsProvider(opts.ipfsProvider);
     config.ipfs = provider;
 
-    if (provider === 'pinata') {
-      if (!opts.pinataJwt) exitWithError('PINATA_JWT env var required when using --ipfs pinata');
-      config.pinataJwt = opts.pinataJwt;
-    }
-    if (provider === 'filecoinPin') {
-      if (!opts.filecoinPrivateKey)
-        exitWithError('FILECOIN_PRIVATE_KEY env var required when using --ipfs filecoinPin');
-      config.filecoinPrivateKey = opts.filecoinPrivateKey;
-    }
-    if (provider === 'node') {
-      if (!opts.ipfsNodeUrl) exitWithError('--ipfs-node-url or IPFS_NODE_URL env var required when using --ipfs node');
-      config.ipfsNodeUrl = opts.ipfsNodeUrl;
+    switch (provider) {
+      case 'pinata':
+        if (!opts.pinataJwt) exitWithError('PINATA_JWT env var required when using --ipfs pinata');
+        config.pinataJwt = opts.pinataJwt;
+        break;
+      case 'filecoinPin':
+        if (!opts.filecoinPrivateKey)
+          exitWithError('FILECOIN_PRIVATE_KEY env var required when using --ipfs filecoinPin');
+        config.filecoinPrivateKey = opts.filecoinPrivateKey;
+        break;
+      case 'node':
+        if (!opts.ipfsNodeUrl) exitWithError('--ipfs-node-url or IPFS_NODE_URL env var required when using --ipfs node');
+        config.ipfsNodeUrl = opts.ipfsNodeUrl;
+        break;
     }
   }
 
@@ -194,7 +195,10 @@ export function getOverridesFromEnv(chainId: number): {
   subgraphUrl?: string;
   registryOverrides?: Record<number, Record<string, string>>;
 } {
-  const result: ReturnType<typeof getOverridesFromEnv> = {};
+  const result: {
+    subgraphUrl?: string;
+    registryOverrides?: Record<number, Record<string, string>>;
+  } = {};
 
   const subgraphUrl = process.env.SUBGRAPH_URL;
   if (subgraphUrl) result.subgraphUrl = subgraphUrl;
@@ -223,10 +227,16 @@ export function getOverridesFromEnv(chainId: number): {
 const KNOWN_RPC_URLS: Record<number, string[]> = {
   1: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'],
   137: ['https://polygon-rpc.com', 'https://rpc.ankr.com/polygon'],
+  8453: ['https://mainnet.base.org', 'https://base-rpc.publicnode.com'],
+  56: ['https://bsc-dataseed.binance.org', 'https://rpc.ankr.com/bsc'],
+  143: ['https://rpc.monad.xyz'],
+  534352: ['https://rpc.scroll.io', 'https://scroll-rpc.publicnode.com'],
+  100: ['https://rpc.gnosischain.com', 'https://rpc.ankr.com/gnosis'],
   11155111: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
   84532: ['https://sepolia.base.org'],
-  59141: ['https://rpc.sepolia.linea.build'],
-  80002: ['https://rpc-amoy.polygon.technology'],
+  97: ['https://data-seed-prebsc-1-s1.binance.org:8545'],
+  10143: ['https://testnet.rpc.monad.xyz'],
+  534351: ['https://sepolia-rpc.scroll.io'],
 };
 
 interface ConfigWarning {
@@ -300,6 +310,8 @@ interface AgentLike {
   mcpEndpoint?: string;
   a2aEndpoint?: string;
   ensEndpoint?: string;
+  webEndpoint?: string;
+  emailEndpoint?: string;
   mcpTools?: unknown[];
   mcpPrompts?: unknown[];
   mcpResources?: unknown[];
@@ -328,10 +340,12 @@ export function buildAgentDetails(
     mcpEndpoint: agent.mcpEndpoint,
     a2aEndpoint: agent.a2aEndpoint,
     ensName: agent.ensEndpoint,
-    mcpTools: agent.mcpTools || [],
-    mcpPrompts: agent.mcpPrompts || [],
-    mcpResources: agent.mcpResources || [],
-    a2aSkills: agent.a2aSkills || [],
+    webEndpoint: agent.webEndpoint,
+    emailEndpoint: agent.emailEndpoint,
+    mcpTools: agent.mcpTools ?? [],
+    mcpPrompts: agent.mcpPrompts ?? [],
+    mcpResources: agent.mcpResources ?? [],
+    a2aSkills: agent.a2aSkills ?? [],
     trustModels: regFile.trustModels,
     owners: regFile.owners,
     endpoints: regFile.endpoints,
@@ -374,14 +388,16 @@ export function extractIpfsConfig(args: Record<string, string>): IpfsConfig {
 export function validateIpfsEnv(config: IpfsConfig): void {
   if (!config.ipfsProvider) return;
   const provider = validateIpfsProvider(config.ipfsProvider);
-  if (provider === 'pinata' && !config.pinataJwt) {
-    exitWithError('PINATA_JWT env var required when using --ipfs pinata');
-  }
-  if (provider === 'filecoinPin' && !config.filecoinPrivateKey) {
-    exitWithError('FILECOIN_PRIVATE_KEY env var required when using --ipfs filecoinPin');
-  }
-  if (provider === 'node' && !config.ipfsNodeUrl) {
-    exitWithError('--ipfs-node-url or IPFS_NODE_URL env var required when using --ipfs node');
+  switch (provider) {
+    case 'pinata':
+      if (!config.pinataJwt) exitWithError('PINATA_JWT env var required when using --ipfs pinata');
+      break;
+    case 'filecoinPin':
+      if (!config.filecoinPrivateKey) exitWithError('FILECOIN_PRIVATE_KEY env var required when using --ipfs filecoinPin');
+      break;
+    case 'node':
+      if (!config.ipfsNodeUrl) exitWithError('--ipfs-node-url or IPFS_NODE_URL env var required when using --ipfs node');
+      break;
   }
 }
 
