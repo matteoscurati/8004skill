@@ -9,6 +9,7 @@
  */
 
 import { SDK } from 'agent0-sdk';
+import type { FeedbackSearchFilters, FeedbackSearchOptions } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
@@ -22,6 +23,33 @@ import {
   outputJson,
   tryCatch,
 } from './lib/shared.js';
+
+/**
+ * Build FeedbackSearchFilters and FeedbackSearchOptions from CLI args.
+ * Exported as a pure function for testability.
+ */
+export function buildFeedbackFilters(args: Record<string, string>): {
+  filters: FeedbackSearchFilters;
+  options: FeedbackSearchOptions;
+} {
+  const filters: FeedbackSearchFilters = {};
+
+  if (args['agent-id']) filters.agentId = args['agent-id'];
+  if (args['agents']) filters.agents = splitCsv(args['agents']);
+  if (args['reviewers']) filters.reviewers = splitCsv(args['reviewers']);
+  if (args['tags']) filters.tags = splitCsv(args['tags']);
+  if (args['capabilities']) filters.capabilities = splitCsv(args['capabilities']);
+  if (args['skills']) filters.skills = splitCsv(args['skills']);
+  if (args['tasks']) filters.tasks = splitCsv(args['tasks']);
+  if (args['names']) filters.names = splitCsv(args['names']);
+  if (args['include-revoked'] === 'true') filters.includeRevoked = true;
+
+  const options: FeedbackSearchOptions = {};
+  if (args['min-value']) options.minValue = parseFloat(args['min-value']);
+  if (args['max-value']) options.maxValue = parseFloat(args['max-value']);
+
+  return { filters, options };
+}
 
 async function main() {
   const args = parseArgs();
@@ -39,7 +67,6 @@ async function main() {
 
   const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
-  const reviewers = args['reviewers'] ? splitCsv(args['reviewers']) : undefined;
 
   const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
 
@@ -47,12 +74,11 @@ async function main() {
     ? await tryCatch(() => sdk.getReputationSummary(agentId))
     : { value: undefined };
 
-  const fbFilters: Record<string, unknown> = {};
-  if (agentId) fbFilters.agentId = agentId;
-  if (agents) fbFilters.agents = agents;
-  if (reviewers) fbFilters.reviewers = reviewers;
+  const { filters: fbFilters, options: fbOptions } = buildFeedbackFilters(args);
 
-  const fbResult = await tryCatch(() => sdk.searchFeedback(fbFilters as Parameters<typeof sdk.searchFeedback>[0]));
+  const fbResult = await tryCatch(() =>
+    sdk.searchFeedback(fbFilters as Parameters<typeof sdk.searchFeedback>[0], fbOptions),
+  );
 
   const result: Record<string, unknown> = {
     reputation: repResult.value ?? { count: 0, averageValue: 0 },
@@ -65,4 +91,8 @@ async function main() {
   outputJson(result);
 }
 
-main().catch(handleError);
+// Only run main when executed directly, not when imported for testing
+const isDirectRun = process.argv[1]?.endsWith('reputation.ts') || process.argv[1]?.endsWith('reputation.js');
+if (isDirectRun) {
+  main().catch(handleError);
+}

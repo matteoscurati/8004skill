@@ -33,9 +33,12 @@ const MUTATION_FLAGS = [
   'image',
   'mcp-endpoint',
   'a2a-endpoint',
+  'ens-endpoint',
   'active',
   'remove-mcp',
   'remove-a2a',
+  'remove-ens',
+  'trust',
   'skills',
   'domains',
   'remove-skills',
@@ -105,6 +108,23 @@ async function main() {
     agent.removeEndpoint({ type: EndpointType.A2A });
   }
 
+  if (args['ens-endpoint']) {
+    agent.setENS(args['ens-endpoint']);
+  }
+
+  if (args['remove-ens'] === 'true') {
+    agent.removeEndpoint({ type: EndpointType.ENS });
+  }
+
+  if (args['trust']) {
+    const trustValues = splitCsv(args['trust']);
+    agent.setTrust(
+      trustValues.includes('reputation'),
+      trustValues.includes('crypto-economic'),
+      trustValues.includes('tee-attestation'),
+    );
+  }
+
   if (args['x402'] !== undefined) {
     agent.setX402Support(args['x402'] !== 'false');
   }
@@ -140,11 +160,15 @@ async function main() {
   emitWalletPrompt();
 
   const httpUri = args['http-uri'];
-  const handle = ipfsProvider
-    ? await agent.registerIPFS()
-    : httpUri
-      ? await agent.registerHTTP(httpUri)
-      : exitWithError('--ipfs or --http-uri is required to re-publish updated agent');
+
+  let handle;
+  if (ipfsProvider) {
+    handle = await agent.registerIPFS();
+  } else if (httpUri) {
+    handle = await agent.registerHTTP(httpUri);
+  } else {
+    exitWithError('--ipfs or --http-uri is required to re-publish updated agent');
+  }
 
   const { result: regFile, txHash } = await submitAndWait(handle);
 

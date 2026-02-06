@@ -237,6 +237,12 @@ const KNOWN_RPC_URLS: Record<number, string[]> = {
   97: ['https://data-seed-prebsc-1-s1.binance.org:8545'],
   10143: ['https://testnet.rpc.monad.xyz'],
   534351: ['https://sepolia-rpc.scroll.io'],
+  42161: ['https://arb1.arbitrum.io/rpc'],
+  421614: ['https://sepolia-rollup.arbitrum.io/rpc'],
+  42220: ['https://forno.celo.org'],
+  44787: ['https://alfajores-forno.celo-testnet.org'],
+  167000: ['https://rpc.mainnet.taiko.xyz'],
+  80002: ['https://rpc-amoy.polygon.technology'],
 };
 
 interface ConfigWarning {
@@ -316,6 +322,8 @@ interface AgentLike {
   mcpPrompts?: unknown[];
   mcpResources?: unknown[];
   a2aSkills?: unknown[];
+  oasfSkills?: unknown[];
+  oasfDomains?: unknown[];
   walletAddress?: string;
 }
 
@@ -346,6 +354,8 @@ export function buildAgentDetails(
     mcpPrompts: agent.mcpPrompts ?? [],
     mcpResources: agent.mcpResources ?? [],
     a2aSkills: agent.a2aSkills ?? [],
+    oasfSkills: agent.oasfSkills ?? [],
+    oasfDomains: agent.oasfDomains ?? [],
     trustModels: regFile.trustModels,
     owners: regFile.owners,
     endpoints: regFile.endpoints,

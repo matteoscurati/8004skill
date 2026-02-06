@@ -479,6 +479,8 @@ Setting an agent wallet requires a typed signature from the target wallet:
 
 ### Supported Chains
 
+18 deployed chains (10 mainnet + 8 testnet) plus 4 planned:
+
 | Chain | Chain ID | Status |
 |-------|----------|--------|
 | Ethereum Mainnet | 1 | Production |
@@ -488,11 +490,21 @@ Setting an agent wallet requires a typed signature from the target wallet:
 | Monad | 143 | Production |
 | Scroll | 534352 | Production |
 | Gnosis | 100 | Production |
+| Arbitrum | 42161 | Production |
+| Celo | 42220 | Production |
+| Taiko | 167000 | Production |
 | Ethereum Sepolia | 11155111 | Testnet (default) |
 | Base Sepolia | 84532 | Testnet |
 | BSC Chapel | 97 | Testnet |
 | Monad Testnet | 10143 | Testnet |
 | Scroll Testnet | 534351 | Testnet |
+| Arbitrum Sepolia | 421614 | Testnet |
+| Celo Alfajores | 44787 | Testnet |
+| Polygon Amoy | 80002 | Testnet |
+| Linea Sepolia | 59141 | Planned |
+| Hedera Testnet | 296 | Planned |
+| HyperEVM Testnet | 998 | Planned |
+| SKALE Base Sepolia | 1351057110 | Planned |
 
 The SDK has built-in registry addresses for Mainnet (1) and Sepolia (11155111). Polygon (137) has a built-in subgraph URL but requires registry address overrides. All other chains require `registryOverrides` in SDK config. See `reference/chains.md` for contract addresses, subgraph URLs, and RPC endpoints.
 

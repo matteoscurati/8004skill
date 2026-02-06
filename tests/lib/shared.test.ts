@@ -79,6 +79,23 @@ describe('validateConfig', () => {
   it('returns no warnings when rpcUrl is absent', () => {
     expect(validateConfig({})).toEqual([]);
   });
+
+  it.each([
+    ['Arbitrum', 42161, 'https://arb1.arbitrum.io/rpc'],
+    ['Celo', 42220, 'https://forno.celo.org'],
+    ['Taiko', 167000, 'https://rpc.mainnet.taiko.xyz'],
+    ['Arbitrum Sepolia', 421614, 'https://sepolia-rollup.arbitrum.io/rpc'],
+    ['Celo Alfajores', 44787, 'https://alfajores-forno.celo-testnet.org'],
+    ['Polygon Amoy', 80002, 'https://rpc-amoy.polygon.technology'],
+  ] as const)('returns no warnings for known %s RPC URL', (_label, chainId, rpcUrl) => {
+    expect(validateConfig({ activeChain: chainId, rpcUrl })).toEqual([]);
+  });
+
+  it('warns on unknown RPC URL for new chains', () => {
+    const warnings = validateConfig({ activeChain: 42161, rpcUrl: 'https://custom-arbitrum.example.com' });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('does not match known public endpoints');
+  });
 });
 
 describe('buildAgentDetails', () => {
@@ -112,6 +129,20 @@ describe('buildAgentDetails', () => {
     expect(result.mcpPrompts).toEqual([]);
     expect(result.mcpResources).toEqual([]);
     expect(result.a2aSkills).toEqual([]);
+    expect(result.oasfSkills).toEqual([]);
+    expect(result.oasfDomains).toEqual([]);
+  });
+
+  it('includes oasfSkills and oasfDomains when provided', () => {
+    const agent = {
+      name: 'OasfAgent',
+      description: 'Agent with OASF',
+      oasfSkills: [{ slug: 'nlp/summarization' }],
+      oasfDomains: [{ slug: 'finance/trading' }],
+    };
+    const result = buildAgentDetails(agent, { active: true });
+    expect(result.oasfSkills).toEqual([{ slug: 'nlp/summarization' }]);
+    expect(result.oasfDomains).toEqual([{ slug: 'finance/trading' }]);
   });
 
   it('merges extras into output', () => {
@@ -408,5 +439,22 @@ describe('outputJson', () => {
   it('writes formatted JSON to stdout', () => {
     outputJson({ key: 'value' });
     expect(stdoutSpy).toHaveBeenCalledWith(JSON.stringify({ key: 'value' }, null, 2));
+  });
+});
+
+describe('chain coverage', () => {
+  const ALL_DEPLOYED_CHAINS = [
+    // Mainnet
+    1, 137, 8453, 56, 143, 534352, 100, 42161, 42220, 167000,
+    // Testnet
+    11155111, 84532, 97, 10143, 534351, 421614, 44787, 80002,
+  ];
+
+  it('has KNOWN_RPC_URLS for all deployed chain IDs', () => {
+    for (const chainId of ALL_DEPLOYED_CHAINS) {
+      const warnings = validateConfig({ activeChain: chainId, rpcUrl: 'https://test.example.com' });
+      const hasKnownUrls = warnings.some((w) => w.message.includes('does not match known public endpoints'));
+      expect(hasKnownUrls).toBe(true);
+    }
   });
 });

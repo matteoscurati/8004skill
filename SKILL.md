@@ -104,9 +104,10 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
 2. **Ask which chain** to use. Show supported chains from `{baseDir}/reference/chains.md`:
    - Ethereum Mainnet (1) — full SDK support
    - Polygon Mainnet (137) — built-in subgraph, requires registry overrides
-   - Base (8453), BSC (56), Monad (143), Scroll (534352), Gnosis (100) — mainnets, require env var overrides
+   - Base (8453), BSC (56), Monad (143), Scroll (534352), Gnosis (100), Arbitrum (42161), Celo (42220), Taiko (167000) — mainnets, require env var overrides
    - Ethereum Sepolia (11155111) — full SDK support, recommended for testing
-   - Base Sepolia (84532), BSC Chapel (97), Monad Testnet (10143), Scroll Testnet (534351) — testnets, require env var overrides
+   - Base Sepolia (84532), BSC Chapel (97), Monad Testnet (10143), Scroll Testnet (534351), Arbitrum Sepolia (421614), Celo Alfajores (44787), Polygon Amoy (80002) — testnets, require env var overrides
+   - Planned (not yet deployed): Linea Sepolia (59141), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Base Sepolia (1351057110)
 
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md`.
    If the chain is NOT Mainnet (1) or Sepolia (11155111): warn that the SDK lacks built-in registry addresses for this chain. The user must set `REGISTRY_ADDRESS_IDENTITY` and `REGISTRY_ADDRESS_REPUTATION`. Polygon (137) has a built-in subgraph URL but still requires registry overrides. All other chains also need `SUBGRAPH_URL`.
@@ -223,7 +224,16 @@ Chain selection required for subgraph search (see Chain Resolution above). Seman
 
 1. **Search query** (natural language) - semantic search
 2. Or **structured filters**: name substring, MCP-only / A2A-only, active only, specific chain or all chains
-3. **Advanced filters** (optional): OASF skills/domains (`--oasf-skills`, `--oasf-domains`), has OASF (`--has-oasf`), has web endpoint (`--has-web`), keyword (`--keyword`), sort (`--sort "field:dir"`), semantic tuning (`--semantic-min-score`, `--semantic-top-k`)
+3. **Advanced filters** (optional):
+   - OASF: `--oasf-skills`, `--oasf-domains`, `--has-oasf`
+   - Endpoints: `--has-web`, `--has-endpoints`, `--has-registration-file`, `--web-contains`, `--mcp-contains`, `--a2a-contains`, `--ens-contains`, `--did-contains`
+   - Capabilities: `--mcp-tools`, `--mcp-prompts`, `--mcp-resources`, `--a2a-skills`, `--supported-trust`
+   - Identity: `--description`, `--agent-ids` (CSV), `--owners` (CSV), `--operators` (CSV), `--wallet-address`
+   - Status: `--x402-support`, `--keyword`
+   - Time: `--registered-from` / `--registered-to`, `--updated-from` / `--updated-to`
+   - Metadata: `--has-metadata-key`, `--metadata-key` + `--metadata-value`
+   - Feedback: `--has-feedback`, `--has-no-feedback`, `--min-feedback-value` / `--max-feedback-value`, `--min-feedback-count` / `--max-feedback-count`, `--feedback-reviewers` (CSV), `--feedback-endpoint`, `--has-feedback-response`, `--feedback-tag`, `--feedback-tag1` / `--feedback-tag2`, `--include-revoked-feedback`
+   - Sort & semantic: `--sort "field:dir"`, `--semantic-min-score`, `--semantic-top-k`
 4. **Result limit** (default: 10, semantic search only via `--limit`)
 
 ### Execution
@@ -235,7 +245,7 @@ npx tsx {baseDir}/scripts/search.ts --query "<query>" [--chain-id <chainId>] [--
 
 **Subgraph search** (structured filters, requires RPC):
 ```
-npx tsx {baseDir}/scripts/search.ts --chain-id <chainId> --rpc-url <rpcUrl> [--name "<name>"] [--mcp-only] [--a2a-only] [--active true] [--chains all] [--has-oasf true] [--oasf-skills "slug1,slug2"] [--oasf-domains "slug1,slug2"] [--has-web true] [--keyword "text"] [--sort "name:asc"] [--semantic-min-score 0.7] [--semantic-top-k 50]
+npx tsx {baseDir}/scripts/search.ts --chain-id <chainId> --rpc-url <rpcUrl> [--name "<name>"] [--mcp-only] [--a2a-only] [--active true] [--chains all] [--has-oasf true] [--oasf-skills "slug1,slug2"] [--oasf-domains "slug1,slug2"] [--has-web true] [--has-endpoints true] [--keyword "text"] [--description "semantic text"] [--owners "0x..."] [--wallet-address "0x..."] [--has-feedback true] [--min-feedback-value 50] [--sort "name:asc"] [--semantic-min-score 0.7] [--semantic-top-k 50]
 ```
 
 ### Result
@@ -330,7 +340,7 @@ Run both scripts:
 npx tsx {baseDir}/scripts/connect.ts --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl>
 ```
 ```
-npx tsx {baseDir}/scripts/reputation.ts --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl>
+npx tsx {baseDir}/scripts/reputation.ts --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> [--tags "starred,reachable"] [--capabilities "nlp"] [--skills "summarize"] [--tasks "task1"] [--names "agent1"] [--include-revoked true] [--min-value 50] [--max-value 100]
 ```
 
 ### Result
@@ -490,7 +500,7 @@ Standard write prerequisites apply (see above). Additionally: IPFS provider must
 
 ### Input
 1. **Agent ID** (required)
-2. Fields to change: Name, Description, MCP endpoint (add/change/remove), A2A endpoint (add/change/remove), Active status, Image, OASF Skills, OASF Domains, x402 support, Metadata (set/delete keys)
+2. Fields to change: Name, Description, MCP endpoint (add/change/remove), A2A endpoint (add/change/remove), ENS name (add/remove), Trust model configuration, Active status, Image, OASF Skills, OASF Domains, x402 support, Metadata (set/delete keys)
 
 ### Confirmation
 Show what will change (old → new). Ask to proceed.
@@ -501,8 +511,10 @@ Show what will change (old → new). Ask to proceed.
 npx tsx {baseDir}/scripts/update-agent.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --ipfs <provider> \
   [--name "<newName>"] [--description "<newDescription>"] [--image <url>] \
-  [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
-  [--remove-mcp] [--remove-a2a] [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
+  [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--ens-endpoint <name.eth>] [--active true|false] \
+  [--remove-mcp] [--remove-a2a] [--remove-ens] \
+  [--trust "reputation,crypto-economic,tee-attestation"] \
+  [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
   [--remove-skills "slug1,slug2"] [--remove-domains "slug1,slug2"] \
   [--validate-oasf true|false] [--x402 true|false] [--metadata '{"key":"value"}'] [--del-metadata "key1,key2"] \
   [--http-uri <uri>]

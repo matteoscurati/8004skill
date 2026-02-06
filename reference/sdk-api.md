@@ -128,6 +128,7 @@ await handle.waitConfirmed(opts?)  // alias for waitMined()
 {
   timeoutMs?: number,       // max wait time in ms (default: 120_000)
   confirmations?: number,   // number of block confirmations to wait for (default: 1)
+  throwOnRevert?: boolean,  // throw if tx reverts (default: true)
 }
 ```
 
@@ -137,21 +138,53 @@ Returned by `sdk.searchAgents()` and `sdk.getAgent()`. Contains subgraph data in
 
 ```typescript
 {
+  // Identity
+  chainId: number,
   agentId: string,
   name: string,
   description: string,
   image?: string,
-  mcpEndpoint?: string,
-  a2aEndpoint?: string,
-  ensEndpoint?: string,
-  web?: string,              // Web endpoint URL (not on Agent class)
-  email?: string,            // Email endpoint (not on Agent class)
+  owners: Address[],
+  operators: Address[],
+
+  // Endpoints (field names differ from Agent class: mcp not mcpEndpoint)
+  mcp?: string,              // MCP endpoint URL
+  a2a?: string,              // A2A agent card URL
+  web?: string,              // Web endpoint URL
+  email?: string,            // Email endpoint
+  ens?: string,              // ENS name
+  did?: string,              // DID identifier
   walletAddress?: string,
-  mcpTools?: string[],
-  a2aSkills?: string[],
-  active?: boolean,
+
+  // Capabilities (non-optional arrays, may be empty)
+  supportedTrusts: string[],
+  a2aSkills: string[],
+  mcpTools: string[],
+  mcpPrompts: string[],
+  mcpResources: string[],
+  oasfSkills: string[],
+  oasfDomains: string[],
+
+  // Status (non-optional booleans)
+  active: boolean,
+  x402support: boolean,
+
+  // Metadata
+  createdAt?: number,
+  updatedAt?: number,
+  lastActivity?: number,
+  agentURI?: string,
+  agentURIType?: string,
+  feedbackCount?: number,
+  averageValue?: number,
+  semanticScore?: number,    // Present when semantic search is used
+  extras: Record<string, any>,
 }
 ```
+
+> **Note:** `AgentSummary` endpoint fields (`mcp`, `a2a`, `ens`, etc.) use short names.
+> The `Agent` class uses longer names (`mcpEndpoint`, `a2aEndpoint`, `ensEndpoint`).
+> Array fields (`mcpTools`, `a2aSkills`, etc.) are non-optional and default to `[]`.
 
 ## SearchFilters
 
@@ -230,11 +263,149 @@ Returned by `sdk.searchAgents()` and `sdk.getAgent()`. Contains subgraph data in
 }
 ```
 
+## FeedbackFilters (SearchFilters sub-filter)
+
+Used as `SearchFilters.feedback` to filter agents by their feedback characteristics.
+
+```typescript
+{
+  hasFeedback?: boolean,
+  hasNoFeedback?: boolean,     // Agents with zero feedback
+  includeRevoked?: boolean,
+  minValue?: number,
+  maxValue?: number,
+  minCount?: number,
+  maxCount?: number,
+  fromReviewers?: Address[],
+  endpoint?: string,
+  hasResponse?: boolean,
+  tag1?: string,
+  tag2?: string,
+  tag?: string,
+}
+```
+
+## Value Encoding Utilities
+
+The SDK exports helpers for encoding/decoding reputation values with decimal precision:
+
+```typescript
+import { encodeReputationValue, decodeReputationValue } from 'agent0-sdk';
+
+// Encode a decimal value for on-chain storage
+const { value, valueDecimals } = encodeReputationValue(99.77);
+// value: 9977n (bigint), valueDecimals: 2
+
+// Decode on-chain values back to a number
+const decoded = decodeReputationValue(9977n, 2);
+// decoded: 99.77
+```
+
 ## Enums
 
 ```typescript
-enum EndpointType { MCP, A2A, ENS, DID, WALLET, OASF }
-enum TrustModel { REPUTATION = 'reputation', CRYPTO_ECONOMIC = 'crypto-economic', TEE_ATTESTATION = 'tee-attestation' }
+enum EndpointType {
+  MCP = "MCP",
+  A2A = "A2A",
+  ENS = "ENS",
+  DID = "DID",
+  WALLET = "wallet",
+  OASF = "OASF",
+}
+
+enum TrustModel {
+  REPUTATION = "reputation",
+  CRYPTO_ECONOMIC = "crypto-economic",
+  TEE_ATTESTATION = "tee-attestation",
+}
+```
+
+## Feedback
+
+```typescript
+{
+  id: [AgentId, Address, number],  // FeedbackIdTuple
+  agentId: string,
+  reviewer: Address,
+  txHash?: string,           // Transaction hash (when created via SDK)
+  value?: number,
+  tags: string[],
+  endpoint?: string,         // On-chain field (Jan 2026)
+  text?: string,
+  context?: Record<string, any>,
+  proofOfPayment?: Record<string, any>,
+  fileURI?: string,
+  createdAt: number,
+  answers: Array<Record<string, any>>,
+  isRevoked: boolean,
+  capability?: string,
+  name?: string,
+  skill?: string,
+  task?: string,
+}
+```
+
+## ID Utilities
+
+```typescript
+import { parseAgentId, formatAgentId, parseFeedbackId, formatFeedbackId } from 'agent0-sdk';
+
+parseAgentId('11155111:42')        // { chainId: 11155111, tokenId: 42 }
+formatAgentId(11155111, 42)        // '11155111:42'
+parseFeedbackId('1:42:0xabc:0')    // { agentId: '1:42', clientAddress: '0xabc', feedbackIndex: 0 }
+formatFeedbackId('1:42', '0xabc', 0) // '1:42:0xabc:0'
+```
+
+## Validation Utilities
+
+```typescript
+import { isValidAddress, isValidAgentId, isValidURI, isValidFeedbackValue, normalizeAddress } from 'agent0-sdk';
+
+isValidAddress('0x...')     // boolean — validates Ethereum address format
+isValidAgentId('1:42')      // boolean — validates chainId:tokenId format
+isValidURI('ipfs://...')    // boolean — basic URI validation
+isValidFeedbackValue(85)    // boolean — 0-100 range check
+normalizeAddress('0xABC')   // '0xabc' — lowercase normalization
+```
+
+## Signature Utilities
+
+```typescript
+import { normalizeEcdsaSignature, recoverMessageSigner, recoverTypedDataSigner } from 'agent0-sdk';
+
+normalizeEcdsaSignature(sig)                           // Normalize ECDSA signature format
+await recoverMessageSigner({ message, signature })     // Recover signer address from signed message
+await recoverTypedDataSigner({ domain, types, primaryType, message, signature }) // Recover from EIP-712
+```
+
+## EndpointCrawler
+
+```typescript
+import { EndpointCrawler } from 'agent0-sdk';
+
+const crawler = new EndpointCrawler(timeoutMs?);
+await crawler.fetchMcpCapabilities(endpoint)   // { mcpTools?, mcpPrompts?, mcpResources? } | null
+await crawler.fetchA2aCapabilities(endpoint)   // { a2aSkills? } | null
+```
+
+## AgentIndexer
+
+```typescript
+import { AgentIndexer } from 'agent0-sdk';
+
+const indexer = new AgentIndexer(subgraphClient?, subgraphUrlOverrides?, defaultChainId?);
+await indexer.getAgent(agentId)                           // AgentSummary
+await indexer.searchAgents(filters?, options?)             // AgentSummary[]
+```
+
+## Constants
+
+```typescript
+import { IPFS_GATEWAYS, TIMEOUTS, DEFAULTS } from 'agent0-sdk';
+
+IPFS_GATEWAYS   // ['https://gateway.pinata.cloud/ipfs/', 'https://ipfs.io/ipfs/', 'https://dweb.link/ipfs/']
+TIMEOUTS        // { IPFS_GATEWAY: 10000, PINATA_UPLOAD: 80000, TRANSACTION_WAIT: 45000, ... }
+DEFAULTS        // { FEEDBACK_EXPIRY_HOURS: 24, SEARCH_PAGE_SIZE: 50 }
 ```
 
 ## Semantic Search Service
