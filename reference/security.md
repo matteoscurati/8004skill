@@ -52,6 +52,11 @@ All signing operations use WalletConnect v2. The agent **never holds private key
 
 Sensitive variables (`PINATA_JWT`, `FILECOIN_PRIVATE_KEY`) should **never** be hardcoded in shell profiles or committed to source control. Recommended approaches:
 
+- **`~/.8004skill/.env` file** (simplest) — copy the included `.env.example` and fill in the values. The file is loaded automatically by every script; shell env vars take precedence. Keep it `chmod 600`:
+  ```bash
+  cp .env.example ~/.8004skill/.env
+  chmod 600 ~/.8004skill/.env
+  ```
 - **macOS Keychain** — store the value once, retrieve it at runtime:
   ```bash
   security add-generic-password -a "$USER" -s PINATA_JWT -w "<your-jwt>"

@@ -59,12 +59,18 @@ Claude Code reads `SKILL.md` from the skills directory at startup. The skill is 
 
 ### Setting environment variables
 
-Claude Code inherits the shell environment. Export variables before launching:
+Claude Code inherits the shell environment. You can either export variables before launching, or define them in `~/.8004skill/.env` (shell values take precedence):
 
 ```bash
+# Option A: shell export
 export PINATA_JWT=your_pinata_jwt    # only if using Pinata for IPFS
 export WC_PROJECT_ID=your_project_id  # optional, a default is provided
 claude
+
+# Option B: .env file (loaded automatically by every script)
+cp .env.example ~/.8004skill/.env
+chmod 600 ~/.8004skill/.env
+# edit ~/.8004skill/.env with your values, then just run: claude
 ```
 
 Write operations use WalletConnect v2 — no private keys in the environment. The agent will pair your wallet via QR code during configuration.
@@ -121,12 +127,17 @@ Configure 8004 for Sepolia
 
 ### Setting environment variables
 
-Set variables in your shell profile (`~/.zshrc`, `~/.bashrc`) or in OpenClaw's environment configuration:
+Set variables in your shell profile (`~/.zshrc`, `~/.bashrc`), in OpenClaw's environment configuration, or in `~/.8004skill/.env` (shell values take precedence):
 
 ```bash
-# In ~/.zshrc or ~/.bashrc
+# Option A: shell profile (~/.zshrc or ~/.bashrc)
 export PINATA_JWT=your_pinata_jwt    # only if using Pinata for IPFS
 export WC_PROJECT_ID=your_project_id  # optional, a default is provided
+
+# Option B: .env file (loaded automatically by every script)
+cp .env.example ~/.8004skill/.env
+chmod 600 ~/.8004skill/.env
+# edit ~/.8004skill/.env with your values
 ```
 
 Write operations use WalletConnect v2 — no private keys needed. The agent will pair your wallet during configuration.

@@ -40,3 +40,4 @@ See [docs/architecture.md](docs/architecture.md) for detailed runtime flow, scri
 - ESM throughout (`"type": "module"` in package.json)
 - Node.js >= 22.0.0 required (enforced via `engine-strict=true`)
 - `bin/cli.mjs` is vanilla JS (no TypeScript, no external deps) so it works via `npx` without `tsx`
+- Environment variables can be defined in `~/.8004skill/.env` (loaded by `scripts/lib/shared.ts` at import time; shell env takes precedence)

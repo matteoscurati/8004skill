@@ -118,6 +118,8 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
    - `node` - needs `IPFS_NODE_URL` env var
    - none (skip if user doesn't plan to register)
 
+   Environment variables can be set in the shell or in `~/.8004skill/.env` (see `.env.example` for a template). Shell variables take precedence.
+
 5. **Ask about WalletConnect project ID** (optional). The skill ships with a default project ID, but users can provide their own from [cloud.walletconnect.com](https://cloud.walletconnect.com) (free). Can be set via `WC_PROJECT_ID` env var or stored in config.
 
 6. **Save config** to `~/.8004skill/config.json` with chmod 600:

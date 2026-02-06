@@ -20,6 +20,7 @@
     "SKILL.md",
     "CLAUDE.md",
     ".claude-skill.json",
+    ".env.example",
     "tsconfig.json"
   ],
   "keywords": [

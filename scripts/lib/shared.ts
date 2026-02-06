@@ -1,7 +1,47 @@
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { SDKConfig, TransactionHandle, TransactionWaitOptions } from 'agent0-sdk';
 import type EthereumProvider from '@walletconnect/ethereum-provider';
 import { isAddress } from 'viem';
 import { initWalletConnectProvider, getConnectedAddress } from './walletconnect.js';
+
+// ── Dotenv loader ───────────────────────────────────────────────────
+
+export const DOT_ENV_PATH = join(homedir(), '.8004skill', '.env');
+
+function stripQuotes(value: string): string {
+  if (value.length >= 2) {
+    const first = value[0];
+    if ((first === '"' || first === "'") && value[value.length - 1] === first) {
+      return value.slice(1, -1);
+    }
+  }
+  return value;
+}
+
+function loadDotenv(): void {
+  let content: string;
+  try {
+    content = readFileSync(DOT_ENV_PATH, 'utf-8');
+  } catch {
+    return; // file missing or unreadable — silently skip
+  }
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    const value = stripQuotes(trimmed.slice(eqIndex + 1).trim());
+    // shell env takes precedence
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadDotenv();
 
 // ── Script version ──────────────────────────────────────────────────
 

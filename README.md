@@ -145,6 +145,13 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 | `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
 | `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
 
+Variables can be exported in the shell or defined in `~/.8004skill/.env` (shell values take precedence). Copy the included `.env.example` to get started:
+
+```bash
+cp .env.example ~/.8004skill/.env
+chmod 600 ~/.8004skill/.env
+```
+
 Read operations (search, load agent, check reputation) do not require a wallet connection. Chains other than Mainnet (1) and Sepolia (11155111) require `SUBGRAPH_URL` and registry address overrides.
 
 ## Supported Chains
