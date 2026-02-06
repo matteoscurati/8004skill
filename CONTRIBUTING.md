@@ -14,9 +14,11 @@ cd 8004skill
 npm install
 ```
 
+> **Note:** End users install via `npx 8004skill install` (no git clone needed). The git clone workflow is for contributors.
+
 ## Development
 
-Scripts live in `scripts/` and are executed at runtime via `npx tsx scripts/<name>.ts`. The shared utility module is `scripts/lib/shared.ts`.
+Scripts live in `scripts/` and are executed at runtime via `npx tsx scripts/<name>.ts`. The shared utility module is `scripts/lib/shared.ts`. The CLI entry point (`bin/cli.mjs`) is vanilla ESM JavaScript with no external dependencies.
 
 Type-check before committing:
 
@@ -31,6 +33,17 @@ npm run build
 ```
 
 The `dist/` directory is gitignored. It is not used at runtime — scripts are executed directly via `tsx`.
+
+## Project structure
+
+| Path | Purpose |
+|------|---------|
+| `bin/cli.mjs` | CLI entry point (`npx 8004skill <cmd>`). Vanilla ESM JS, no external deps. |
+| `scripts/` | TypeScript scripts executed at runtime via `npx tsx`. |
+| `scripts/lib/` | Shared utilities (`shared.ts`, `walletconnect.ts`). |
+| `reference/` | Runtime docs consumed by the agent (chains, SDK API, schema, security). |
+| `.claude-skill.json` | Skill metadata for ecosystem tools. |
+| `SKILL.md` | Skill definition read by the agent. |
 
 ## Adding a new script
 

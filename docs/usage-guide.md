@@ -1,10 +1,34 @@
 # Usage Guide
 
+- [Installation](#installation)
 - [Claude Code](#claude-code)
 - [OpenClaw](#openclaw)
 - [Other SKILL.md-Compatible Agents](#other-skillmd-compatible-agents)
 - [Verifying Installation](#verifying-installation)
+- [Updating and Uninstalling](#updating-and-uninstalling)
 - [Common Workflows](#common-workflows)
+
+---
+
+## Installation
+
+The recommended way to install 8004skill is via npx:
+
+```bash
+npx 8004skill install
+```
+
+This downloads the skill, installs production dependencies, and creates symlinks for the agent(s) of your choice (Claude Code and/or OpenClaw). It works from anywhere — no git clone required.
+
+**From source (git clone):**
+
+```bash
+git clone https://github.com/matteoscurati/8004skill.git
+cd 8004skill
+./install.sh          # or: node bin/cli.mjs install
+```
+
+When run from a git clone (`.git` present), the CLI symlinks the repo directly instead of copying files.
 
 ---
 
@@ -14,7 +38,7 @@
 
 ### Install
 
-Run `./install.sh` from the repo root. The installer detects Claude Code, creates the symlink to `~/.claude/skills/`, and runs `npm install`.
+Run `npx 8004skill install` and choose "Claude Code" or "Both". Alternatively, from a git clone, run `./install.sh`. The installer creates the symlink to `~/.claude/skills/` and installs dependencies.
 
 ### How it works
 
@@ -60,7 +84,7 @@ Write operations use WalletConnect v2 — no private keys in the environment. Th
 
 ### Install
 
-Run `./install.sh` from the repo root. The installer detects OpenClaw, creates the symlink to `~/.openclaw/skills/`, and runs `npm install`.
+Run `npx 8004skill install` and choose "OpenClaw" or "Both". Alternatively, from a git clone, run `./install.sh`. The installer creates the symlink to `~/.openclaw/skills/` and installs dependencies.
 
 ### How it works
 
@@ -117,7 +141,15 @@ Write operations use WalletConnect v2 — no private keys needed. The agent will
 
 ## Verifying Installation
 
-### Check the symlink
+The quickest way to verify everything is working:
+
+```bash
+npx 8004skill doctor
+```
+
+This checks Node.js version, symlinks, skill files, scripts, dependencies, config, and WalletConnect session status. From a git clone: `node bin/cli.mjs doctor`.
+
+### Check symlinks manually
 
 ```bash
 # Claude Code
@@ -127,25 +159,37 @@ ls -la ~/.claude/skills/8004skill
 ls -la ~/.openclaw/skills/8004skill
 ```
 
-Both should point to the cloned repo directory.
-
-### Check dependencies
-
-```bash
-ls 8004skill/node_modules/.package-lock.json
-```
-
-If `node_modules` is missing, run `npm install`. The agent also handles this via Auto-Setup on first use.
+The symlink should point to the cloned repo directory (git clone mode) or `~/.8004skill/skill/` (npx mode).
 
 ### Test with the agent
 
-Try a read-only operation (no private key needed):
+Try a read-only operation (no wallet needed):
 
 ```
 Search for agents on Sepolia
 ```
 
 If results appear as a formatted table, the skill is working.
+
+---
+
+## Updating and Uninstalling
+
+### Update
+
+```bash
+npx 8004skill update
+```
+
+In git clone mode, this pulls the latest changes and refreshes dependencies. In npx mode, it re-copies skill files from the latest npm package and reinstalls dependencies. From a git clone: `./update.sh` or `node bin/cli.mjs update`.
+
+### Uninstall
+
+```bash
+npx 8004skill uninstall
+```
+
+Removes symlinks, installed skill files (npx mode), and optionally user data (`~/.8004skill/`). From a git clone: `./uninstall.sh` or `node bin/cli.mjs uninstall`.
 
 ---
 

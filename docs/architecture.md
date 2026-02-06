@@ -29,9 +29,10 @@ User <---> AI Agent <---> TypeScript Scripts <---> agent0-sdk <---> EVM Chain / 
 Key properties:
 
 - **ESM-only** TypeScript project. Node >= 22. Executed via `npx tsx`.
-- **Runtime dependencies**: `agent0-sdk` (bundles viem, IPFS clients, subgraph client), `@walletconnect/ethereum-provider`, `qrcode-terminal`.
+- **Runtime dependencies**: `agent0-sdk` (bundles viem, IPFS clients, subgraph client), `@walletconnect/ethereum-provider`, `qrcode-terminal`, `tsx`.
 - **No build step at runtime** -- tsx compiles on the fly. `tsc` is for type checking only.
 - **Stateless scripts** -- each invocation is a standalone process. State lives in `~/.8004skill/config.json` and environment variables.
+- **npm-distributed** -- `npx 8004skill install` copies skill files to `~/.8004skill/skill/` and symlinks into agent directories. The CLI (`bin/cli.mjs`) is vanilla ESM JavaScript with no external dependencies, so it runs via npx without tsx.
 
 ---
 
@@ -103,6 +104,9 @@ All scripts follow the same I/O protocol:
 ### Directory Layout
 
 ```
+bin/
+  cli.mjs            # CLI entry point (npx 8004skill <cmd>, vanilla ESM JS)
+
 scripts/
   check-env.ts       # Environment preflight (WC session status, env vars)
   register.ts        # Register new agent on-chain

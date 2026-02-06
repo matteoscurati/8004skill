@@ -80,7 +80,7 @@ Here is the fastest path from install to your first operation:
 
 ### 1. Install
 
-Follow the [Installation](#installation) steps above.
+Follow the [Quick Install](#quick-install) steps above.
 
 ### 2. Configure
 
@@ -149,9 +149,15 @@ Read operations (search, load agent, check reputation) do not require a wallet c
 
 ## Supported Chains
 
-**Full support** (built-in contract addresses and subgraph URLs): Ethereum Mainnet (1), Ethereum Sepolia (11155111).
+18 deployed chains (10 mainnet + 8 testnet) plus 4 planned.
 
-**Requires overrides** (`SUBGRAPH_URL`, `REGISTRY_ADDRESS_IDENTITY`, `REGISTRY_ADDRESS_REPUTATION`): Base Sepolia (84532), Linea Sepolia (59141), Polygon Amoy (80002), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Sepolia (1351057110).
+**Full SDK support** (built-in contract addresses and subgraph URLs): Ethereum Mainnet (1), Ethereum Sepolia (11155111).
+
+**Requires registry overrides** (`REGISTRY_ADDRESS_IDENTITY`, `REGISTRY_ADDRESS_REPUTATION`; Polygon 137 has a built-in subgraph URL, all others also need `SUBGRAPH_URL`):
+
+- **Mainnets**: Polygon (137), Base (8453), BSC (56), Monad (143), Scroll (534352), Gnosis (100), Arbitrum (42161), Celo (42220), Taiko (167000)
+- **Testnets**: Base Sepolia (84532), BSC Chapel (97), Monad Testnet (10143), Scroll Testnet (534351), Arbitrum Sepolia (421614), Celo Alfajores (44787), Polygon Amoy (80002)
+- **Planned**: Linea Sepolia (59141), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Base Sepolia (1351057110)
 
 For contract addresses and RPC endpoints, see [`reference/chains.md`](reference/chains.md).
 
@@ -170,6 +176,19 @@ ln -s "$(pwd)" ~/.claude/skills/8004skill
 mkdir -p ~/.openclaw/skills
 ln -s "$(pwd)" ~/.openclaw/skills/8004skill
 ```
+
+## CLI Management
+
+The `8004skill` CLI provides commands for managing the skill installation:
+
+```bash
+npx 8004skill install     # Install or reinstall the skill
+npx 8004skill uninstall   # Remove symlinks, installed files, and optionally user data
+npx 8004skill update      # Pull latest changes (git clone) or re-copy files (npx) and refresh deps
+npx 8004skill doctor      # Check installation, symlinks, scripts, config, and WalletConnect status
+```
+
+From a git clone, you can also use `node bin/cli.mjs <command>`.
 
 ## Security
 
