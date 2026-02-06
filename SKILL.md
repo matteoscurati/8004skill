@@ -1,7 +1,7 @@
 ---
 name: 8004skill
 description: Use when the user asks to register, search, update, or inspect on-chain agents, give or revoke reputation feedback, manage agent wallets, or verify agent identity on EVM chains via the ERC-8004 protocol. Handles configuration, IPFS metadata, and multi-chain support using agent0-sdk.
-metadata: {"openclaw":{"emoji":"🔗","homepage":"https://github.com/matteoscurati/8004skill","os":["darwin","linux"],"requires":{"bins":["node","npx"]},"install":[{"id":"brew","kind":"brew","formula":"node","bins":["node","npx"],"label":"Install Node.js (brew)"}]}}
+metadata: {"npm":{"package":"8004skill","postInstall":"npm install --omit=dev"},"openclaw":{"emoji":"🔗","homepage":"https://github.com/matteoscurati/8004skill","os":["darwin","linux"],"requires":{"bins":["node","npx"]},"install":[{"id":"brew","kind":"brew","formula":"node","bins":["node","npx"],"label":"Install Node.js (brew)"}]}}
 ---
 
 # 8004skill - ERC-8004 Agent Economy

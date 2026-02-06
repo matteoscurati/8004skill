@@ -1,0 +1,15 @@
+{
+  "name": "8004skill",
+  "version": "1.1.0",
+  "description": "ERC-8004 on-chain agent economy skill",
+  "skillFile": "SKILL.md",
+  "installTargets": [
+    { "path": "~/.claude/skills/8004skill", "agent": "claude-code" },
+    { "path": "~/.openclaw/skills/8004skill", "agent": "openclaw" }
+  ],
+  "postInstall": "npm install --omit=dev",
+  "requires": {
+    "node": ">=22.0.0",
+    "bins": ["node", "npx"]
+  }
+}

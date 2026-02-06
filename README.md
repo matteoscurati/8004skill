@@ -37,7 +37,32 @@ See the **[Usage Guide](docs/usage-guide.md)** for agent-specific setup and work
 - **Node.js** >= 22.0.0
 - A **SKILL.md-compatible AI agent** such as [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://openclaw.org), or similar
 
-## Installation
+## Quick Install
+
+```bash
+npx 8004skill install
+```
+
+Downloads the skill, installs dependencies, and links it to your agent. Supports Claude Code and OpenClaw.
+
+### Alternative methods
+
+**From source (git clone):**
+
+```bash
+git clone https://github.com/matteoscurati/8004skill.git
+cd 8004skill
+./install.sh
+```
+
+**Via skill manager:**
+
+```bash
+npx skills add matteoscurati/8004skill
+npx openskills install matteoscurati/8004skill
+```
+
+## Installation (from source)
 
 ```bash
 git clone https://github.com/matteoscurati/8004skill.git

@@ -1,6 +1,6 @@
 {
   "name": "8004skill",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "AI agent skill for ERC-8004 agent economy interactions",
   "license": "GPL-3.0",
@@ -10,21 +10,44 @@
     "url": "https://github.com/matteoscurati/8004skill.git"
   },
   "homepage": "https://github.com/matteoscurati/8004skill",
+  "bin": {
+    "8004skill": "bin/cli.mjs"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "reference/",
+    "SKILL.md",
+    "CLAUDE.md",
+    ".claude-skill.json",
+    "tsconfig.json"
+  ],
+  "keywords": [
+    "claude-code",
+    "claude-skill",
+    "agent-skill",
+    "erc-8004",
+    "ai-agent",
+    "walletconnect",
+    "ethereum",
+    "on-chain-agents"
+  ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "prepublishOnly": "npm run typecheck"
   },
   "dependencies": {
     "@walletconnect/ethereum-provider": "^2.23.4",
     "agent0-sdk": "^1.5.2",
-    "qrcode-terminal": "^0.12.0"
+    "qrcode-terminal": "^0.12.0",
+    "tsx": "^4.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",
-    "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^4.0.18"
   },
