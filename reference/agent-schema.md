@@ -35,7 +35,7 @@
     },
     {
       "type": "OASF",
-      "value": "https://github.com/agntcy/oasf/",
+      "value": "https://github.com/agntcy/oasf",
       "meta": {
         "version": "v0.8.0",
         "skills": ["natural_language_processing/summarization"],

@@ -81,18 +81,15 @@ describe('validateConfig', () => {
   });
 
   it.each([
-    ['Arbitrum', 42161, 'https://arb1.arbitrum.io/rpc'],
-    ['Celo', 42220, 'https://forno.celo.org'],
-    ['Taiko', 167000, 'https://rpc.mainnet.taiko.xyz'],
-    ['Arbitrum Sepolia', 421614, 'https://sepolia-rollup.arbitrum.io/rpc'],
-    ['Celo Alfajores', 44787, 'https://alfajores-forno.celo-testnet.org'],
-    ['Polygon Amoy', 80002, 'https://rpc-amoy.polygon.technology'],
+    ['Ethereum Mainnet', 1, 'https://eth.llamarpc.com'],
+    ['Ethereum Sepolia', 11155111, 'https://rpc.sepolia.org'],
+    ['Polygon Mainnet', 137, 'https://polygon-rpc.com'],
   ] as const)('returns no warnings for known %s RPC URL', (_label, chainId, rpcUrl) => {
     expect(validateConfig({ activeChain: chainId, rpcUrl })).toEqual([]);
   });
 
-  it('warns on unknown RPC URL for new chains', () => {
-    const warnings = validateConfig({ activeChain: 42161, rpcUrl: 'https://custom-arbitrum.example.com' });
+  it('warns on unknown RPC URL for supported chains', () => {
+    const warnings = validateConfig({ activeChain: 137, rpcUrl: 'https://custom-polygon.example.com' });
     expect(warnings).toHaveLength(1);
     expect(warnings[0].message).toContain('does not match known public endpoints');
   });
@@ -443,15 +440,10 @@ describe('outputJson', () => {
 });
 
 describe('chain coverage', () => {
-  const ALL_DEPLOYED_CHAINS = [
-    // Mainnet
-    1, 137, 8453, 56, 143, 534352, 100, 42161, 42220, 167000,
-    // Testnet
-    11155111, 84532, 97, 10143, 534351, 421614, 44787, 80002,
-  ];
+  const SDK_SUPPORTED_CHAINS = [1, 11155111, 137];
 
-  it('has KNOWN_RPC_URLS for all deployed chain IDs', () => {
-    for (const chainId of ALL_DEPLOYED_CHAINS) {
+  it('has KNOWN_RPC_URLS for all SDK-supported chain IDs', () => {
+    for (const chainId of SDK_SUPPORTED_CHAINS) {
       const warnings = validateConfig({ activeChain: chainId, rpcUrl: 'https://test.example.com' });
       const hasKnownUrls = warnings.some((w) => w.message.includes('does not match known public endpoints'));
       expect(hasKnownUrls).toBe(true);

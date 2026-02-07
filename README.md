@@ -152,21 +152,19 @@ cp .env.example ~/.8004skill/.env
 chmod 600 ~/.8004skill/.env
 ```
 
-Read operations (search, load agent, check reputation) do not require a wallet connection. Chains other than Mainnet (1) and Sepolia (11155111) require `SUBGRAPH_URL` and registry address overrides.
+Read operations (search, load agent, check reputation) do not require a wallet connection. Only Mainnet (1) and Sepolia (11155111) work out of the box. Polygon (137) has a built-in subgraph but requires registry address overrides (`REGISTRY_ADDRESS_IDENTITY`, `REGISTRY_ADDRESS_REPUTATION`).
 
 ## Supported Chains
 
-18 deployed chains (10 mainnet + 8 testnet) plus 4 planned.
+The SDK supports 3 chains:
 
-**Full SDK support** (built-in contract addresses and subgraph URLs): Ethereum Mainnet (1), Ethereum Sepolia (11155111).
+| Chain | Chain ID | SDK Support |
+|-------|----------|-------------|
+| Ethereum Mainnet | 1 | Full (registry + subgraph) |
+| Ethereum Sepolia | 11155111 | Full (registry + subgraph) |
+| Polygon Mainnet | 137 | Partial (subgraph only; registry via env vars) |
 
-**Requires registry overrides** (`REGISTRY_ADDRESS_IDENTITY`, `REGISTRY_ADDRESS_REPUTATION`; Polygon 137 has a built-in subgraph URL, all others also need `SUBGRAPH_URL`):
-
-- **Mainnets**: Polygon (137), Base (8453), BSC (56), Monad (143), Scroll (534352), Gnosis (100), Arbitrum (42161), Celo (42220), Taiko (167000)
-- **Testnets**: Base Sepolia (84532), BSC Chapel (97), Monad Testnet (10143), Scroll Testnet (534351), Arbitrum Sepolia (421614), Celo Alfajores (44787), Polygon Amoy (80002)
-- **Planned**: Linea Sepolia (59141), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Base Sepolia (1351057110)
-
-For contract addresses and RPC endpoints, see [`reference/chains.md`](reference/chains.md).
+Additional chains are deployed on-chain but not yet supported by the SDK. See [`reference/chains.md`](reference/chains.md) for the full list.
 
 ## Manual Installation
 

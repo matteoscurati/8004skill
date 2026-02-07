@@ -102,15 +102,14 @@ Format: {emoji} {label} -- {averageValue}/100 ({count} reviews)
 1. **Read existing config** from `~/.8004skill/config.json` (if it exists). Show current settings.
 
 2. **Ask which chain** to use. Show supported chains from `{baseDir}/reference/chains.md`:
-   - Ethereum Mainnet (1) — full SDK support
-   - Polygon Mainnet (137) — built-in subgraph, requires registry overrides
-   - Base (8453), BSC (56), Monad (143), Scroll (534352), Gnosis (100), Arbitrum (42161), Celo (42220), Taiko (167000) — mainnets, require env var overrides
-   - Ethereum Sepolia (11155111) — full SDK support, recommended for testing
-   - Base Sepolia (84532), BSC Chapel (97), Monad Testnet (10143), Scroll Testnet (534351), Arbitrum Sepolia (421614), Celo Alfajores (44787), Polygon Amoy (80002) — testnets, require env var overrides
-   - Planned (not yet deployed): Linea Sepolia (59141), Hedera Testnet (296), HyperEVM Testnet (998), SKALE Base Sepolia (1351057110)
+   - Ethereum Mainnet (1) — full SDK support (built-in registry + subgraph)
+   - Ethereum Sepolia (11155111) — full SDK support (built-in registry + subgraph), recommended for testing
+   - Polygon Mainnet (137) — partial SDK support (built-in subgraph, registry via env vars)
+
+   Additional chains (Base, BSC, Monad, Scroll, Gnosis, Arbitrum, Celo, Taiko + testnets) are deployed on-chain but not yet supported by the SDK. See `{baseDir}/reference/chains.md` for the full "Coming soon" list.
 
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md`.
-   If the chain is NOT Mainnet (1) or Sepolia (11155111): warn that the SDK lacks built-in registry addresses for this chain. The user must set `REGISTRY_ADDRESS_IDENTITY` and `REGISTRY_ADDRESS_REPUTATION`. Polygon (137) has a built-in subgraph URL but still requires registry overrides. All other chains also need `SUBGRAPH_URL`.
+   If the chain is Polygon (137): warn that the SDK has a built-in subgraph but no registry addresses -- the user must set `REGISTRY_ADDRESS_IDENTITY` and `REGISTRY_ADDRESS_REPUTATION` via env vars.
 
 4. **Ask about IPFS provider** (optional, needed for registration/updates):
    - `pinata` - needs `PINATA_JWT` env var

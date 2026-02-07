@@ -266,23 +266,8 @@ export function getOverridesFromEnv(chainId: number): {
  */
 const KNOWN_RPC_URLS: Record<number, string[]> = {
   1: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'],
-  137: ['https://polygon-rpc.com', 'https://rpc.ankr.com/polygon'],
-  8453: ['https://mainnet.base.org', 'https://base-rpc.publicnode.com'],
-  56: ['https://bsc-dataseed.binance.org', 'https://rpc.ankr.com/bsc'],
-  143: ['https://rpc.monad.xyz'],
-  534352: ['https://rpc.scroll.io', 'https://scroll-rpc.publicnode.com'],
-  100: ['https://rpc.gnosischain.com', 'https://rpc.ankr.com/gnosis'],
   11155111: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
-  84532: ['https://sepolia.base.org'],
-  97: ['https://data-seed-prebsc-1-s1.binance.org:8545'],
-  10143: ['https://testnet.rpc.monad.xyz'],
-  534351: ['https://sepolia-rpc.scroll.io'],
-  42161: ['https://arb1.arbitrum.io/rpc'],
-  421614: ['https://sepolia-rollup.arbitrum.io/rpc'],
-  42220: ['https://forno.celo.org'],
-  44787: ['https://alfajores-forno.celo-testnet.org'],
-  167000: ['https://rpc.mainnet.taiko.xyz'],
-  80002: ['https://rpc-amoy.polygon.technology'],
+  137: ['https://polygon-rpc.com', 'https://rpc.ankr.com/polygon'],
 };
 
 interface ConfigWarning {
