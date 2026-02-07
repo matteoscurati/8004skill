@@ -2,7 +2,7 @@
 
 ## Agent Registration File (IPFS/HTTP metadata)
 
-> **Note**: The ERC-8004 spec uses `services` as the key for endpoints. The SDK accepts both `services` and `endpoints` when reading, and normalizes to `endpoints` internally.
+> The ERC-8004 spec uses `services` as the key for endpoints. The SDK accepts both `services` and `endpoints` when reading, and normalizes to `endpoints` internally.
 
 ```json
 {
@@ -10,145 +10,27 @@
   "description": "An AI agent that does X",
   "image": "ipfs://Qm... or https://...",
   "endpoints": [
-    {
-      "type": "MCP",
-      "value": "https://mcp.example.com/sse",
-      "meta": {
-        "version": "2025-06-18",
-        "mcpTools": ["tool1", "tool2"],
-        "mcpPrompts": ["prompt1"],
-        "mcpResources": ["resource1"]
-      }
-    },
-    {
-      "type": "A2A",
-      "value": "https://a2a.example.com/.well-known/agent.json",
-      "meta": {
-        "version": "0.30",
-        "a2aSkills": ["skill1"]
-      }
-    },
-    {
-      "type": "ENS",
-      "value": "myagent.eth",
-      "meta": { "version": "1.0" }
-    },
-    {
-      "type": "OASF",
-      "value": "https://github.com/agntcy/oasf",
-      "meta": {
-        "version": "v0.8.0",
-        "skills": ["natural_language_processing/summarization"],
-        "domains": ["finance_and_business/investment_services"]
-      }
-    }
+    { "type": "MCP|A2A|ENS|OASF", "value": "<url>", "meta": { "version": "...", ...capabilities } }
   ],
   "trustModels": ["reputation", "crypto-economic", "tee-attestation"],
-  "owners": ["0x..."],
-  "operators": ["0x..."],
-  "active": true,
-  "x402support": false,
-  "metadata": {},
-  "updatedAt": 1706000000
+  "owners": ["0x..."], "operators": ["0x..."],
+  "active": true, "x402support": false,
+  "metadata": {}, "updatedAt": 1706000000
 }
 ```
 
-## Agent Summary (from subgraph/search)
+## Agent Summary / Feedback / Reputation Summary
 
-`mcp` and `a2a` are now endpoint URL strings (not booleans). New fields include `web`, `email`, OASF data, timestamps, and feedback aggregates.
-
-```json
-{
-  "chainId": 11155111,
-  "agentId": "11155111:42",
-  "name": "My Agent",
-  "description": "...",
-  "image": "ipfs://...",
-  "owners": ["0x..."],
-  "operators": [],
-  "mcp": "https://mcp.example.com/sse",
-  "a2a": "https://a2a.example.com/.well-known/agent.json",
-  "web": "https://example.com",
-  "email": "agent@example.com",
-  "ens": "myagent.eth",
-  "walletAddress": "0x...",
-  "supportedTrusts": ["reputation"],
-  "a2aSkills": [],
-  "mcpTools": ["tool1"],
-  "mcpPrompts": [],
-  "mcpResources": [],
-  "oasfSkills": ["natural_language_processing/summarization"],
-  "oasfDomains": ["finance_and_business/investment_services"],
-  "active": true,
-  "x402support": false,
-  "createdAt": 1706000000,
-  "updatedAt": 1706100000,
-  "lastActivity": 1706200000,
-  "agentURI": "ipfs://Qm...",
-  "agentURIType": "ipfs",
-  "feedbackCount": 15,
-  "averageValue": 82.5,
-  "semanticScore": 0.92,
-  "extras": {}
-}
-```
-
-## Feedback Structure
-
-```json
-{
-  "id": ["11155111:42", "0xReviewerAddress", 0],
-  "agentId": "11155111:42",
-  "reviewer": "0xReviewerAddress",
-  "txHash": "0x...",
-  "value": 85,
-  "tags": ["quality", "speed"],
-  "endpoint": "https://mcp.example.com",
-  "text": "Great agent, fast responses",
-  "context": {},
-  "fileURI": "ipfs://...",
-  "createdAt": 1706000000,
-  "answers": [{ "uri": "ipfs://Qm...", "hash": "0x..." }],
-  "isRevoked": false,
-  "capability": "tools",
-  "name": "tool1"
-}
-```
+See `AgentSummary`, `Feedback`, and `getReputationSummary()` types in sdk-api.md.
 
 ## Feedback File (off-chain enrichment, uploaded to IPFS)
 
-```json
-{
-  "text": "Detailed feedback text",
-  "context": { "sessionId": "...", "duration": 120 },
-  "proofOfPayment": { "txHash": "0x...", "amount": "0.01 ETH" },
-  "capability": "tools",
-  "name": "summarize",
-  "skill": "summarization",
-  "task": "document_summary"
-}
-```
-
-## Reputation Summary
-
-```json
-{
-  "count": 15,
-  "averageValue": 82.5
-}
-```
-
-Value range: -100 to 100 (stored as `int128 value` + `uint8 valueDecimals`, supporting up to 18 decimal places on-chain). The SDK accepts numbers or decimal strings and encodes automatically.
+Fields: `text`, `context`, `proofOfPayment`, `capability`, `name`, `skill`, `task`.
 
 ## On-Chain Metadata
 
-Metadata key-value pairs stored directly on the Identity Registry (not in the registration file). Accessed via `setMetadata(agentId, key, value)` and `getMetadata(agentId, key)`. Values are `bytes` (hex-encoded).
-
-Reserved key: `agentWallet` (set via `setAgentWallet` with EIP-712 signature, not via `setMetadata`).
+Key-value pairs on the Identity Registry (not in registration file). Values are `bytes` (hex-encoded). Reserved key: `agentWallet` (set via `setAgentWallet` with EIP-712 signature, not `setMetadata`).
 
 ## Agent Wallet (EIP-712)
 
-Setting an agent wallet requires an EIP-712 typed signature from the new wallet address. The typed data has:
-- Domain: `{ name: "ERC8004IdentityRegistry", version: "1", chainId, verifyingContract }`
-- Type: `AgentWalletSet { agentId: uint256, newWallet: address, owner: address, deadline: uint256 }`
-- Deadline must be within 300 seconds of chain time.
+Requires EIP-712 typed signature from new wallet. Domain: `{ name: "ERC8004IdentityRegistry", version: "1", chainId, verifyingContract }`. Type: `AgentWalletSet { agentId: uint256, newWallet: address, owner: address, deadline: uint256 }`. Deadline within 300s of chain time.
