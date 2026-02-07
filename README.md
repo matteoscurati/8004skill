@@ -35,6 +35,7 @@ See the **[Usage Guide](docs/usage-guide.md)** for agent-specific setup and work
 ## Prerequisites
 
 - **Node.js** >= 22.0.0
+- **Platform**: macOS or Linux (Windows is not supported)
 - A **SKILL.md-compatible AI agent** such as [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [OpenClaw](https://openclaw.org), or similar
 
 ## Quick Install
@@ -60,14 +61,6 @@ cd 8004skill
 ```bash
 npx skills add matteoscurati/8004skill
 npx openskills install matteoscurati/8004skill
-```
-
-## Installation (from source)
-
-```bash
-git clone https://github.com/matteoscurati/8004skill.git
-cd 8004skill
-./install.sh
 ```
 
 The install wizard checks prerequisites, installs npm dependencies, and symlinks the skill into the agent(s) of your choice (`~/.claude/skills/` and/or `~/.openclaw/skills/`). After that, every SKILL.md-compatible agent on your machine will discover the skill automatically.

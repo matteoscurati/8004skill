@@ -39,7 +39,7 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "prepublishOnly": "npm run typecheck"
+    "prepublishOnly": "npm run typecheck && npm test"
   },
   "dependencies": {
     "@walletconnect/ethereum-provider": "^2.23.4",
