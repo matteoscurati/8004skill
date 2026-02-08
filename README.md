@@ -130,13 +130,11 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 | Variable | Required For | Description |
 |----------|-------------|-------------|
 | `WC_PROJECT_ID` | All WC operations (optional) | WalletConnect project ID from cloud.walletconnect.com. A default is provided if not set. |
-| `PINATA_JWT` | IPFS via Pinata | JWT token for Pinata pinning |
-| `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning |
-| `IPFS_NODE_URL` | IPFS via local node | URL of the IPFS node API |
-| `SEARCH_API_URL` | Semantic search (optional) | Override URL for the semantic search API |
-| `SUBGRAPH_URL` | Non-default chains | Subgraph URL for the active chain |
-| `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry contract address override |
-| `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry contract address override |
+| `PINATA_JWT` | `ipfs: "pinata"` | JWT token for Pinata pinning |
+| `FILECOIN_PRIVATE_KEY` | `ipfs: "filecoinPin"` | Private key for Filecoin pinning |
+| `IPFS_NODE_URL` | `ipfs: "node"` | URL of the IPFS node API |
+
+> **Note:** The three IPFS variables are mutually exclusive — you only need the one that matches the provider you selected during configuration. IPFS is optional and only required for write operations that store metadata (agent registration, feedback with text).
 
 Variables can be exported in the shell or defined in `~/.8004skill/.env` (shell values take precedence). Copy the included `.env.example` to get started:
 
