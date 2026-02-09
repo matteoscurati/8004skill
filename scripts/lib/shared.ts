@@ -231,6 +231,18 @@ export async function loadWalletProvider(chainId: number): Promise<EthereumProvi
 
 // ── Environment overrides for non-default chains ────────────────────
 
+/**
+ * Registry addresses for chains not yet in the SDK's DEFAULT_REGISTRIES.
+ * Polygon shares the same deterministic CREATE2 addresses as Ethereum Mainnet.
+ * Env vars take precedence over these defaults.
+ */
+const REGISTRY_DEFAULTS: Record<number, Record<string, string>> = {
+  137: {
+    IDENTITY: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+    REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
+  },
+};
+
 export function getOverridesFromEnv(chainId: number): {
   subgraphUrl?: string;
   registryOverrides?: Record<number, Record<string, string>>;
@@ -253,6 +265,8 @@ export function getOverridesFromEnv(chainId: number): {
   }
   if (overrideEntries.length > 0) {
     result.registryOverrides = { [chainId]: Object.fromEntries(overrideEntries) };
+  } else if (chainId in REGISTRY_DEFAULTS) {
+    result.registryOverrides = { [chainId]: REGISTRY_DEFAULTS[chainId] };
   }
 
   return result;

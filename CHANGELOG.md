@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - **CLI management** — `install`, `uninstall`, `update`, and `doctor` subcommands (`bin/cli.mjs`)
 - **dotenv support** — environment variables can be defined in `~/.8004skill/.env`
 - **Respond-to-feedback script** — agents can now respond to feedback they received
-- **Polygon Mainnet (137)** — partial support (subgraph; registry via env vars)
+- **Polygon Mainnet (137)** — full support (registry + subgraph)
 - **Test suite** — 139 tests across shared utilities, WalletConnect, search filters, and reputation filters (Vitest)
 - **IPFS env var validation** — register, feedback, and update scripts fail fast on missing IPFS config
 - **Copyable pairing URI** — WalletConnect pairing URI exposed as text alongside the QR code

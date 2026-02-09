@@ -331,6 +331,27 @@ describe('getOverridesFromEnv', () => {
     expect(result.subgraphUrl).toBeUndefined();
     expect(result.registryOverrides).toBeUndefined();
   });
+
+  it('falls back to built-in Polygon registry addresses when no env overrides set', () => {
+    vi.stubEnv('REGISTRY_ADDRESS_IDENTITY', '');
+    vi.stubEnv('REGISTRY_ADDRESS_REPUTATION', '');
+    const result = getOverridesFromEnv(137);
+    expect(result.registryOverrides).toEqual({
+      137: {
+        IDENTITY: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+        REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
+      },
+    });
+  });
+
+  it('prefers env vars over built-in Polygon registry defaults', () => {
+    vi.stubEnv('REGISTRY_ADDRESS_IDENTITY', '0x1111111111111111111111111111111111111111');
+    vi.stubEnv('REGISTRY_ADDRESS_REPUTATION', '');
+    const result = getOverridesFromEnv(137);
+    expect(result.registryOverrides).toEqual({
+      137: { IDENTITY: '0x1111111111111111111111111111111111111111' },
+    });
+  });
 });
 
 describe('validateIpfsEnv', () => {

@@ -4,9 +4,9 @@
 
 | Chain | Chain ID | SDK Support |
 |-------|----------|-------------|
-| Ethereum Mainnet | 1 | Full (built-in registry + subgraph) |
-| Ethereum Sepolia | 11155111 | Full (built-in registry + subgraph), recommended for testing |
-| Polygon Mainnet | 137 | Partial (subgraph built-in, registry via env vars) |
+| Ethereum Mainnet | 1 | Full (registry + subgraph) |
+| Ethereum Sepolia | 11155111 | Full (registry + subgraph), recommended for testing |
+| Polygon Mainnet | 137 | Full (registry + subgraph) |
 
 Contract addresses and subgraph URLs are built-in to the SDK. Override with `SUBGRAPH_URL` env var if needed.
 
@@ -19,7 +19,3 @@ Additional chains (Base, BSC, Monad, Scroll, Gnosis, Arbitrum, Celo, Taiko + tes
 - **Mainnet (1)**: `https://eth.llamarpc.com`, `https://rpc.ankr.com/eth`
 - **Sepolia (11155111)**: `https://rpc.sepolia.org`, `https://ethereum-sepolia-rpc.publicnode.com`
 - **Polygon (137)**: `https://polygon-rpc.com`, `https://rpc.ankr.com/polygon`
-
-## Notes
-
-- Polygon (137) requires registry address overrides: `REGISTRY_ADDRESS_IDENTITY` and `REGISTRY_ADDRESS_REPUTATION`.

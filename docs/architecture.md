@@ -487,9 +487,9 @@ Setting an agent wallet requires a typed signature from the target wallet:
 
 | Chain | Chain ID | SDK Support |
 |-------|----------|-------------|
-| Ethereum Mainnet | 1 | Built-in (registry + subgraph) |
-| Ethereum Sepolia | 11155111 | Built-in (registry + subgraph) |
-| Polygon Mainnet | 137 | Partial (subgraph built-in, registry via env vars) |
+| Ethereum Mainnet | 1 | Full (registry + subgraph) |
+| Ethereum Sepolia | 11155111 | Full (registry + subgraph) |
+| Polygon Mainnet | 137 | Full (registry + subgraph) |
 
 Additional chains (8 mainnets, 11 testnets) have contracts deployed but are not yet supported by the SDK. See [`reference/chains.md`](../reference/chains.md) for the full list, contract addresses, subgraph URLs, and RPC endpoints.
 

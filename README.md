@@ -143,7 +143,7 @@ cp .env.example ~/.8004skill/.env
 chmod 600 ~/.8004skill/.env
 ```
 
-Read operations (search, load agent, check reputation) do not require a wallet connection. Only Mainnet (1) and Sepolia (11155111) work out of the box. Polygon (137) has a built-in subgraph but requires registry address overrides (`REGISTRY_ADDRESS_IDENTITY`, `REGISTRY_ADDRESS_REPUTATION`).
+Read operations (search, load agent, check reputation) do not require a wallet connection. All 3 supported chains (Mainnet, Sepolia, Polygon) work out of the box with built-in registry addresses and subgraph URLs.
 
 ## Supported Chains
 
@@ -153,7 +153,7 @@ The SDK supports 3 chains:
 |-------|----------|-------------|
 | Ethereum Mainnet | 1 | Full (registry + subgraph) |
 | Ethereum Sepolia | 11155111 | Full (registry + subgraph) |
-| Polygon Mainnet | 137 | Partial (subgraph only; registry via env vars) |
+| Polygon Mainnet | 137 | Full (registry + subgraph) |
 
 Additional chains are deployed on-chain but not yet supported by the SDK. See [`reference/chains.md`](reference/chains.md) for the full list.
 

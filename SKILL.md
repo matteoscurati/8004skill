@@ -87,10 +87,9 @@ These errors apply across write operations — only operation-specific errors ar
 2. **Ask which chain**. Show supported chains from `{baseDir}/reference/chains.md`:
    - Ethereum Mainnet (1) — full SDK support
    - Ethereum Sepolia (11155111) — full SDK support, recommended for testing
-   - Polygon Mainnet (137) — partial SDK support (subgraph built-in, registry via env vars)
+   - Polygon Mainnet (137) — full SDK support
 
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md`.
-   If Polygon (137): warn that registry addresses must be set via env vars.
 
 4. **Ask about IPFS provider** (optional): `pinata` (needs `PINATA_JWT`), `filecoinPin` (needs `FILECOIN_PRIVATE_KEY`), `node` (needs `IPFS_NODE_URL`), or none.
    Env vars can be set in shell or `~/.8004skill/.env` (see `.env.example`). Shell takes precedence.
