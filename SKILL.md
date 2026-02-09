@@ -54,6 +54,17 @@ Chain selection is **mandatory** for every operation. Resolve before executing a
 
 **Write prerequisites** — Config loaded → WalletConnect session (run `wc-pair.ts` if needed) → preflight check (`check-env.ts`) → user confirmation. All signing via WalletConnect v2 — the agent never holds private keys.
 
+### IPFS Credential Resolution
+
+When an operation needs IPFS and the config has a provider set (`ipfs` field):
+
+1. Check if the matching env var is set (`PINATA_JWT` / `FILECOIN_PRIVATE_KEY` / `IPFS_NODE_URL`).
+2. If missing, ask: "I need your {credential name} to upload metadata to IPFS. You can paste it here or set it in `~/.8004skill/.env` for future sessions."
+3. Pass it as an inline env var: `PINATA_JWT=<value> npx tsx ...`
+4. After success, show:
+
+> **Security reminder**: The credential was used for this operation only and was not saved. Consider rotating it if pasted directly. To avoid repeated prompts, set it in `~/.8004skill/.env` (chmod 600).
+
 **Pairing display** — when a script emits `{ "status": "pairing", "uri": "wc:..." }` on stderr, show the URI in a fenced code block. Tell user: "Scan the QR code or copy the URI and paste in your wallet app."
 
 **Secret handling** — see security.md. Never accept/display private keys, mnemonics, or passwords in chat. Warn immediately if accidentally pasted.
@@ -92,7 +103,7 @@ These errors apply across write operations — only operation-specific errors ar
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md`.
 
 4. **Ask about IPFS provider** (optional): `pinata` (needs `PINATA_JWT`), `filecoinPin` (needs `FILECOIN_PRIVATE_KEY`), `node` (needs `IPFS_NODE_URL`), or none.
-   Env vars can be set in shell or `~/.8004skill/.env` (see `.env.example`). Shell takes precedence.
+   Env vars can be set in shell or `~/.8004skill/.env` (see `.env.example`). Shell takes precedence. If not set, the credential is prompted inline per "IPFS Credential Resolution".
 
 5. **WalletConnect project ID** (optional). Default provided; users can set their own via `WC_PROJECT_ID` env var or config.
 
@@ -118,7 +129,7 @@ These errors apply across write operations — only operation-specific errors ar
 > **Best practices**: Read [Registration.md](https://github.com/erc-8004/best-practices/blob/main/Registration.md) and [ERC8004SPEC.md](https://github.com/erc-8004/best-practices/blob/main/src/ERC8004SPEC.md). Four Golden Rules: (1) clear name, detailed description with capabilities/pricing; (2) at least one endpoint (MCP or A2A); (3) OASF skills/domains; (4) ERC-8004 registration details in metadata.
 
 ### Prerequisites
-Write prerequisites + IPFS provider configured.
+Write prerequisites + IPFS provider configured (credential resolved per "IPFS Credential Resolution").
 
 ### Input
 
@@ -132,7 +143,7 @@ Show: Chain, Signer, Name, Description, endpoints, OASF, x402, IPFS provider, es
 ### Execution
 
 ```
-npx tsx {baseDir}/scripts/register.ts \
+[PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/register.ts \
   --chain-id <chainId> --rpc-url <rpcUrl> --name "<name>" --description "<description>" \
   --ipfs <provider> [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
   [--image <url>] [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
@@ -143,7 +154,7 @@ npx tsx {baseDir}/scripts/register.ts \
 Show: agentId (`{chainId}:{tokenId}`), txHash (link to explorer), metadata URI. Save to config `registrations.<chainId>`.
 
 ### Error Handling
-- IPFS errors: Check corresponding env var is set and valid.
+- IPFS errors: Credential may be invalid or expired. Ask user to verify and retry.
 
 ---
 
@@ -197,7 +208,7 @@ Table: #, Agent ID, Name, MCP, A2A, Description. Offer follow-ups: load details,
 
 ### Input
 
-**Agent ID**, **rating** (-100 to 100, decimals allowed), **tags** (optional, up to 2), **text** (optional, needs IPFS), **endpoint** (optional).
+**Agent ID**, **rating** (-100 to 100, decimals allowed), **tags** (optional, up to 2), **text** (optional, needs IPFS — credential resolved per "IPFS Credential Resolution"), **endpoint** (optional).
 
 ### Confirmation
 Show: Target Agent, Rating, Tags, Text, Signer, Chain. Ask: "Submit?"
@@ -205,7 +216,7 @@ Show: Target Agent, Rating, Tags, Text, Signer, Chain. Ask: "Submit?"
 ### Execution
 
 ```
-npx tsx {baseDir}/scripts/feedback.ts \
+[PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/feedback.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --value <value> \
   [--tag1 <tag>] [--tag2 <tag>] [--text "<text>"] [--endpoint <url>] \
   [--capability <cap>] [--tool-name <tool>] [--skill <skill>] [--task <task>] [--ipfs <provider>]
@@ -317,12 +328,12 @@ Card: **Agent** (name + ID), **Status**, **Trust** (label), **Wallet**, **Owners
 
 **Triggered by**: "update agent", "edit agent", "change agent name", "add MCP endpoint".
 
-Write prerequisites + IPFS provider. Best practices same as Register (Operation 2).
+Write prerequisites + IPFS provider (credential resolved per "IPFS Credential Resolution"). Best practices same as Register (Operation 2).
 
 Input: **Agent ID** + fields to change (name, description, endpoints, OASF, active, image, x402, trust, metadata). Show old → new. Ask to proceed.
 
 ```
-npx tsx {baseDir}/scripts/update-agent.ts \
+[PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/update-agent.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --ipfs <provider> \
   [--name "<name>"] [--description "<desc>"] [--image <url>] \
   [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--ens-endpoint <name.eth>] [--active true|false] \

@@ -134,7 +134,7 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 | `FILECOIN_PRIVATE_KEY` | `ipfs: "filecoinPin"` | Private key for Filecoin pinning |
 | `IPFS_NODE_URL` | `ipfs: "node"` | URL of the IPFS node API |
 
-> **Note:** The three IPFS variables are mutually exclusive — you only need the one that matches the provider you selected during configuration. IPFS is optional and only required for write operations that store metadata (agent registration, feedback with text).
+> **Note:** The three IPFS variables are mutually exclusive — you only need the one that matches the provider you selected during configuration. IPFS is optional and only required for write operations that store metadata (agent registration, feedback with text). If a credential is not set when needed, the agent will prompt for it inline (not persisted).
 
 Variables can be exported in the shell or defined in `~/.8004skill/.env` (shell values take precedence). Copy the included `.env.example` to get started:
 
