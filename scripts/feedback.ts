@@ -11,7 +11,6 @@
  *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org --feedback-index 0
  */
 
-import { SDK } from 'agent0-sdk';
 import type { FeedbackFileInput } from 'agent0-sdk';
 import {
   parseArgs,
@@ -19,8 +18,7 @@ import {
   requireChainId,
   parseDecimalInRange,
   validateAgentId,
-  buildSdkConfig,
-  getOverridesFromEnv,
+  createSdk,
   extractIpfsConfig,
   validateIpfsEnv,
   exitWithError,
@@ -43,22 +41,10 @@ async function main() {
 
   const ipfsConfig = extractIpfsConfig(args);
   validateIpfsEnv(ipfsConfig);
-  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = ipfsConfig;
 
   const walletProvider = await loadWalletProvider(chainId);
 
-  const sdk = new SDK(
-    buildSdkConfig({
-      chainId,
-      rpcUrl,
-      walletProvider,
-      ipfsProvider,
-      pinataJwt,
-      filecoinPrivateKey,
-      ipfsNodeUrl,
-      ...getOverridesFromEnv(chainId),
-    }),
-  );
+  const sdk = createSdk({ chainId, rpcUrl, walletProvider, ipfs: ipfsConfig });
 
   emitWalletPrompt();
 

@@ -19,6 +19,9 @@ import {
   fetchWithRetry,
   exitWithError,
   outputJson,
+  isMainScript,
+  sanitizeString,
+  createSdk,
 } from '../../scripts/lib/shared.js';
 
 let exitSpy: ReturnType<typeof vi.spyOn>;
@@ -145,6 +148,67 @@ describe('buildAgentDetails', () => {
   it('merges extras into output', () => {
     const result = buildAgentDetails({ name: 'A', description: 'B' }, { active: true }, { customField: 'hello' });
     expect(result.customField).toBe('hello');
+  });
+
+  it('sanitizes control characters from name and description', () => {
+    const result = buildAgentDetails(
+      { name: 'Good\x00Agent\x07', description: 'Hello\x01World' },
+      { active: true },
+    );
+    expect(result.name).toBe('GoodAgent');
+    expect(result.description).toBe('HelloWorld');
+  });
+
+  it('preserves newlines and tabs in description', () => {
+    const result = buildAgentDetails(
+      { name: 'A', description: 'Line1\nLine2\tTabbed' },
+      { active: true },
+    );
+    expect(result.description).toBe('Line1\nLine2\tTabbed');
+  });
+
+  it('truncates long name and sets _truncated flag', () => {
+    const longName = 'x'.repeat(600);
+    const result = buildAgentDetails({ name: longName, description: 'B' }, { active: true });
+    expect((result.name as string).length).toBe(500);
+    expect(result._truncated).toBe(true);
+  });
+
+  it('truncates long description and sets _truncated flag', () => {
+    const longDesc = 'y'.repeat(3000);
+    const result = buildAgentDetails({ name: 'A', description: longDesc }, { active: true });
+    expect((result.description as string).length).toBe(2000);
+    expect(result._truncated).toBe(true);
+  });
+
+  it('does not set _truncated when fields are within limits', () => {
+    const result = buildAgentDetails({ name: 'A', description: 'B' }, { active: true });
+    expect(result._truncated).toBeUndefined();
+  });
+});
+
+describe('sanitizeString', () => {
+  it('strips control characters but keeps \\n and \\t', () => {
+    const { value } = sanitizeString('hello\x00\x01world\n\ttab', 100);
+    expect(value).toBe('helloworld\n\ttab');
+  });
+
+  it('truncates at maxLength', () => {
+    const { value, truncated } = sanitizeString('abcdef', 3);
+    expect(value).toBe('abc');
+    expect(truncated).toBe(true);
+  });
+
+  it('does not truncate at exact length', () => {
+    const { value, truncated } = sanitizeString('abc', 3);
+    expect(value).toBe('abc');
+    expect(truncated).toBe(false);
+  });
+
+  it('returns empty string for empty input', () => {
+    const { value, truncated } = sanitizeString('', 100);
+    expect(value).toBe('');
+    expect(truncated).toBe(false);
   });
 });
 
@@ -332,16 +396,11 @@ describe('getOverridesFromEnv', () => {
     expect(result.registryOverrides).toBeUndefined();
   });
 
-  it('falls back to built-in Polygon registry addresses when no env overrides set', () => {
+  it('returns no overrides for Polygon when no env vars set (SDK handles it natively)', () => {
     vi.stubEnv('REGISTRY_ADDRESS_IDENTITY', '');
     vi.stubEnv('REGISTRY_ADDRESS_REPUTATION', '');
     const result = getOverridesFromEnv(137);
-    expect(result.registryOverrides).toEqual({
-      137: {
-        IDENTITY: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
-        REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
-      },
-    });
+    expect(result.registryOverrides).toBeUndefined();
   });
 
   it('prefers env vars over built-in Polygon registry defaults', () => {
@@ -457,6 +516,48 @@ describe('outputJson', () => {
   it('writes formatted JSON to stdout', () => {
     outputJson({ key: 'value' });
     expect(stdoutSpy).toHaveBeenCalledWith(JSON.stringify({ key: 'value' }, null, 2));
+  });
+});
+
+describe('isMainScript', () => {
+  const savedArgv = process.argv;
+  afterEach(() => { process.argv = savedArgv; });
+
+  it('returns true when argv[1] matches the script name (.ts)', () => {
+    process.argv = ['node', '/path/to/search.ts'];
+    expect(isMainScript('file:///path/to/search.ts')).toBe(true);
+  });
+
+  it('returns true when argv[1] is .js and import.meta.url is .ts', () => {
+    process.argv = ['node', '/path/to/search.js'];
+    expect(isMainScript('file:///other/path/search.ts')).toBe(true);
+  });
+
+  it('returns false when script names differ', () => {
+    process.argv = ['node', '/path/to/register.ts'];
+    expect(isMainScript('file:///path/to/search.ts')).toBe(false);
+  });
+
+  it('returns false when argv[1] is undefined', () => {
+    process.argv = ['node'];
+    expect(isMainScript('file:///path/to/search.ts')).toBe(false);
+  });
+});
+
+describe('createSdk', () => {
+  it('returns an SDK instance', () => {
+    const sdk = createSdk({ chainId: 11155111, rpcUrl: 'https://rpc.sepolia.org' });
+    expect(sdk).toBeDefined();
+    expect(typeof sdk.loadAgent).toBe('function');
+  });
+
+  it('applies IPFS config when provided', () => {
+    const sdk = createSdk({
+      chainId: 11155111,
+      rpcUrl: 'https://rpc.sepolia.org',
+      ipfs: { ipfsProvider: 'pinata', pinataJwt: 'test-jwt' },
+    });
+    expect(sdk).toBeDefined();
   });
 });
 

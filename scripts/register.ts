@@ -9,15 +9,13 @@
  *     --name "MyAgent" --description "An AI agent" --ipfs pinata
  */
 
-import { SDK } from 'agent0-sdk';
 import type { RegistrationFile } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
   requireChainId,
   splitCsv,
-  buildSdkConfig,
-  getOverridesFromEnv,
+  createSdk,
   extractIpfsConfig,
   validateIpfsEnv,
   exitWithError,
@@ -37,7 +35,6 @@ async function main() {
   const description = requireArg(args, 'description', 'agent description');
   const ipfsConfig = extractIpfsConfig(args);
   validateIpfsEnv(ipfsConfig);
-  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = ipfsConfig;
   const mcpEndpoint = args['mcp-endpoint'];
   const a2aEndpoint = args['a2a-endpoint'];
   const active = args['active'] !== 'false';
@@ -50,18 +47,7 @@ async function main() {
 
   const walletProvider = await loadWalletProvider(chainId);
 
-  const sdk = new SDK(
-    buildSdkConfig({
-      chainId,
-      rpcUrl,
-      walletProvider,
-      ipfsProvider,
-      pinataJwt,
-      filecoinPrivateKey,
-      ipfsNodeUrl,
-      ...getOverridesFromEnv(chainId),
-    }),
-  );
+  const sdk = createSdk({ chainId, rpcUrl, walletProvider, ipfs: ipfsConfig });
 
   const agent = sdk.createAgent(name, description, image);
 
@@ -82,7 +68,7 @@ async function main() {
 
   const handle = httpUri
     ? await agent.registerHTTP(httpUri)
-    : ipfsProvider
+    : ipfsConfig.ipfsProvider
       ? await agent.registerIPFS()
       : exitWithError('Either --ipfs or --http-uri is required for registration');
 

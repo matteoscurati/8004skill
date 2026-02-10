@@ -6,14 +6,12 @@
  *   npx tsx connect.ts --agent-id 11155111:42 --chain-id 11155111 --rpc-url https://rpc.sepolia.org
  */
 
-import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
   requireChainId,
   validateAgentId,
-  buildSdkConfig,
-  getOverridesFromEnv,
+  createSdk,
   handleError,
   outputJson,
   tryCatch,
@@ -27,7 +25,7 @@ async function main() {
   const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
 
-  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
+  const sdk = createSdk({ chainId, rpcUrl });
 
   const agent = await sdk.loadAgent(agentId);
   const regFile = agent.getRegistrationFile();

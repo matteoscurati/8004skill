@@ -1,6 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
+import { SDK } from 'agent0-sdk';
 import type { SDKConfig, TransactionHandle, TransactionWaitOptions } from 'agent0-sdk';
 import type EthereumProvider from '@walletconnect/ethereum-provider';
 import { isAddress } from 'viem';
@@ -20,6 +21,25 @@ function stripQuotes(value: string): string {
   return value;
 }
 
+export function formatPermissions(mode: number): string {
+  return (mode & 0o777).toString(8).padStart(3, '0');
+}
+
+function warnIfWorldReadable(filePath: string): void {
+  try {
+    const st = statSync(filePath);
+    if ((st.mode & 0o077) !== 0) {
+      console.error(JSON.stringify({
+        status: 'warning',
+        message: `.env file ${filePath} has permissions ${formatPermissions(st.mode)} ` +
+          '(expected 600). Other users may be able to read IPFS secrets. Run: chmod 600 ' + filePath,
+      }));
+    }
+  } catch {
+    // statSync failed — skip permission check
+  }
+}
+
 function loadDotenv(): void {
   let content: string;
   try {
@@ -27,6 +47,9 @@ function loadDotenv(): void {
   } catch {
     return; // file missing or unreadable — silently skip
   }
+
+  warnIfWorldReadable(DOT_ENV_PATH);
+
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
@@ -42,6 +65,21 @@ function loadDotenv(): void {
 }
 
 loadDotenv();
+
+// ── Main-script guard ───────────────────────────────────────────────
+
+/**
+ * Return true when the current process was launched as `scriptPath`
+ * (i.e. the file is run directly, not imported for testing).
+ *
+ * Usage: `if (isMainScript(import.meta.url)) main().catch(handleError);`
+ */
+export function isMainScript(importMetaUrl: string): boolean {
+  const scriptPath = process.argv[1];
+  if (!scriptPath) return false;
+  const stripExt = (p: string): string => basename(p).replace(/\.[tj]s$/, '');
+  return stripExt(scriptPath) === stripExt(new URL(importMetaUrl).pathname);
+}
 
 // ── Script version ──────────────────────────────────────────────────
 
@@ -220,6 +258,23 @@ export function buildSdkConfig(opts: {
   return config;
 }
 
+/**
+ * Create an SDK instance with environment overrides applied automatically.
+ */
+export function createSdk(opts: {
+  chainId: number;
+  rpcUrl: string;
+  walletProvider?: EthereumProvider;
+  ipfs?: IpfsConfig;
+}): SDK {
+  const { ipfs, ...rest } = opts;
+  return new SDK(buildSdkConfig({
+    ...rest,
+    ...ipfs,
+    ...getOverridesFromEnv(opts.chainId),
+  }));
+}
+
 // ── WalletConnect provider loader ───────────────────────────────────
 
 export async function loadWalletProvider(chainId: number): Promise<EthereumProvider> {
@@ -231,26 +286,16 @@ export async function loadWalletProvider(chainId: number): Promise<EthereumProvi
 
 // ── Environment overrides for non-default chains ────────────────────
 
-/**
- * Registry addresses for chains not yet in the SDK's DEFAULT_REGISTRIES.
- * Polygon shares the same deterministic CREATE2 addresses as Ethereum Mainnet.
- * Env vars take precedence over these defaults.
- */
-const REGISTRY_DEFAULTS: Record<number, Record<string, string>> = {
-  137: {
-    IDENTITY: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
-    REPUTATION: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
-  },
-};
+/** Env vars take precedence; empty because all supported chains have built-in SDK addresses. */
+const REGISTRY_DEFAULTS: Record<number, Record<string, string>> = {};
 
-export function getOverridesFromEnv(chainId: number): {
+interface EnvOverrides {
   subgraphUrl?: string;
   registryOverrides?: Record<number, Record<string, string>>;
-} {
-  const result: {
-    subgraphUrl?: string;
-    registryOverrides?: Record<number, Record<string, string>>;
-  } = {};
+}
+
+export function getOverridesFromEnv(chainId: number): EnvOverrides {
+  const result: EnvOverrides = {};
 
   const subgraphUrl = process.env.SUBGRAPH_URL;
   if (subgraphUrl) result.subgraphUrl = subgraphUrl;
@@ -282,6 +327,8 @@ const KNOWN_RPC_URLS: Record<number, string[]> = {
   1: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'],
   11155111: ['https://rpc.sepolia.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
   137: ['https://polygon-rpc.com', 'https://rpc.ankr.com/polygon'],
+  8453: ['https://mainnet.base.org', 'https://rpc.ankr.com/base'],
+  84532: ['https://sepolia.base.org', 'https://rpc.ankr.com/base_sepolia'],
 };
 
 interface ConfigWarning {
@@ -334,6 +381,18 @@ export function handleError(err: unknown): never {
   exitWithError(String(err));
 }
 
+// ── Untrusted data sanitisation ─────────────────────────────────────
+
+/** Strip control characters (U+0000-U+001F except \n and \t) and enforce a max-length limit. */
+export function sanitizeString(
+  raw: string,
+  maxLength: number,
+): { value: string; truncated: boolean } {
+  const cleaned = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+  const truncated = cleaned.length > maxLength;
+  return { value: truncated ? cleaned.slice(0, maxLength) : cleaned, truncated };
+}
+
 // ── Output helpers ──────────────────────────────────────────────────
 
 export function outputJson(data: unknown): void {
@@ -378,10 +437,13 @@ export function buildAgentDetails(
   regFile: RegFileLike,
   extras?: Record<string, unknown>,
 ): Record<string, unknown> {
+  const sName = sanitizeString(agent.name, 500);
+  const sDesc = sanitizeString(agent.description, 2000);
+
   return {
     agentId: agent.agentId,
-    name: agent.name,
-    description: agent.description,
+    name: sName.value,
+    description: sDesc.value,
     image: agent.image,
     active: regFile.active,
     mcpEndpoint: agent.mcpEndpoint,
@@ -399,6 +461,7 @@ export function buildAgentDetails(
     owners: regFile.owners,
     endpoints: regFile.endpoints,
     ...extras,
+    ...((sName.truncated || sDesc.truncated) && { _truncated: true }),
   };
 }
 

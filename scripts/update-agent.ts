@@ -8,15 +8,14 @@
  *     --rpc-url https://rpc.sepolia.org --ipfs pinata --name "NewName"
  */
 
-import { SDK, EndpointType } from 'agent0-sdk';
+import { EndpointType } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
   requireChainId,
   splitCsv,
   validateAgentId,
-  buildSdkConfig,
-  getOverridesFromEnv,
+  createSdk,
   extractIpfsConfig,
   validateIpfsEnv,
   exitWithError,
@@ -58,7 +57,6 @@ async function main() {
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
   const ipfsConfig = extractIpfsConfig(args);
   validateIpfsEnv(ipfsConfig);
-  const { ipfsProvider, pinataJwt, filecoinPrivateKey, ipfsNodeUrl } = ipfsConfig;
 
   const hasMutation = MUTATION_FLAGS.some((f) => args[f] !== undefined);
   if (!hasMutation) {
@@ -69,18 +67,7 @@ async function main() {
 
   const walletProvider = await loadWalletProvider(chainId);
 
-  const sdk = new SDK(
-    buildSdkConfig({
-      chainId,
-      rpcUrl,
-      walletProvider,
-      ipfsProvider,
-      pinataJwt,
-      filecoinPrivateKey,
-      ipfsNodeUrl,
-      ...getOverridesFromEnv(chainId),
-    }),
-  );
+  const sdk = createSdk({ chainId, rpcUrl, walletProvider, ipfs: ipfsConfig });
 
   const agent = await sdk.loadAgent(agentId);
 
@@ -162,7 +149,7 @@ async function main() {
   const httpUri = args['http-uri'];
 
   let handle;
-  if (ipfsProvider) {
+  if (ipfsConfig.ipfsProvider) {
     handle = await agent.registerIPFS();
   } else if (httpUri) {
     handle = await agent.registerHTTP(httpUri);

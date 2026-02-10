@@ -9,15 +9,13 @@
  *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org
  */
 
-import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
   requireChainId,
   validateAgentId,
   validateAddress,
-  buildSdkConfig,
-  getOverridesFromEnv,
+  createSdk,
   exitWithError,
   loadWalletProvider,
   handleError,
@@ -49,14 +47,7 @@ async function main() {
 
   const walletProvider = await loadWalletProvider(chainId);
 
-  const sdk = new SDK(
-    buildSdkConfig({
-      chainId,
-      rpcUrl,
-      walletProvider,
-      ...getOverridesFromEnv(chainId),
-    }),
-  );
+  const sdk = createSdk({ chainId, rpcUrl, walletProvider });
 
   emitWalletPrompt();
 

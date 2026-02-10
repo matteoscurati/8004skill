@@ -121,8 +121,10 @@ scripts/
   verify.ts          # EIP-191 identity signing and verification
   wc-pair.ts         # WalletConnect pairing / session status
   wc-disconnect.ts   # WalletConnect session disconnect
+  transfer.ts        # Transfer agent ownership
   lib/
     shared.ts        # CLI parsing, validation, SDK config helpers
+    filters.ts       # Search and feedback filter builders (used by search.ts, reputation.ts)
     walletconnect.ts # WalletConnect session manager (FileSystemStorage, provider init)
 ```
 
@@ -132,7 +134,10 @@ Every script imports from `shared.ts`. It provides:
 
 | Export | Purpose |
 |--------|---------|
+| `DOT_ENV_PATH` | Absolute path to `~/.8004skill/.env`. |
 | `SCRIPT_VERSION` | Version constant for script identification. |
+| `formatPermissions(mode)` | Formats a `statSync` mode as a 3-digit octal string (e.g. `"644"`). |
+| `isMainScript(importMetaUrl)` | Returns `true` if the current module is the entry point (replaces per-script `isDirectRun` checks). |
 | `parseArgs()` | Converts `--flag value` argv into `Record<string, string>`. Boolean flags (no value) become `"true"`. |
 | `requireArg(args, key, label)` | Exits with error if `args[key]` is missing. Returns the value. |
 | `parseChainId(raw)` | Parses chain ID string to number. Exits if invalid. |
@@ -143,7 +148,9 @@ Every script imports from `shared.ts`. It provides:
 | `validateIpfsProvider(raw)` | Validates against allowed set: `pinata`, `filecoinPin`, `node`. |
 | `parseDecimalInRange(raw, name, min, max)` | Parses and validates a decimal number within a range. |
 | `splitCsv(raw)` | Splits a comma-separated string into a trimmed array. |
+| `sanitizeString(raw, maxLength)` | Strips control characters and truncates. Returns `{ value, truncated }`. Used by `buildAgentDetails` on untrusted on-chain data. |
 | `buildSdkConfig(opts)` | Builds `SDKConfig` object from CLI args and env vars. Accepts `walletProvider`, `subgraphUrl`, `registryOverrides`. |
+| `createSdk(opts)` | Convenience wrapper: builds config with `getOverridesFromEnv` and returns a new `SDK` instance. Used by all scripts. |
 | `getOverridesFromEnv(chainId)` | Reads `SUBGRAPH_URL`, `REGISTRY_ADDRESS_*` from env. Returns SDK override config. |
 | `loadWalletProvider(chainId)` | Restores WalletConnect session or triggers new pairing (QR code). Returns EIP-1193 provider. |
 | `fetchWithRetry(url, init, opts?)` | HTTP fetch with exponential backoff, `Retry-After` header support, and abort signal. |
@@ -155,8 +162,17 @@ Every script imports from `shared.ts`. It provides:
 | `extractIpfsConfig(args)` | Extracts IPFS provider, Pinata JWT, Filecoin key, and node URL from args/env. |
 | `validateIpfsEnv(config)` | Validates that the required IPFS env var is set before wallet approval. |
 | `validateConfig(config)` | Validates a config object and returns warnings (non-blocking). |
-| `buildAgentDetails(agent, regFile, extras?)` | Builds a standardized agent detail object from an Agent/AgentSummary and its registration file. |
+| `buildAgentDetails(agent, regFile, extras?)` | Builds a standardized agent detail object from an Agent/AgentSummary and its registration file. Sanitizes untrusted fields (name, description). |
 | `submitAndWait(handle, opts?)` | Logs `{status:'submitted', txHash}` to stderr, waits for mining, returns `{result, txHash}`. |
+
+### Filter Library (`scripts/lib/filters.ts`)
+
+Extracted filter builders for search and feedback operations:
+
+| Export | Purpose |
+|--------|---------|
+| `buildSearchFilters(args)` | Builds `SearchFilters` and `SearchOptions` from CLI args. Used by `search.ts`. |
+| `buildFeedbackFilters(args)` | Builds `FeedbackSearchFilters` and `FeedbackSearchOptions` from CLI args. Used by `reputation.ts`. |
 
 ### Script Pattern
 
@@ -165,8 +181,7 @@ Every script follows this structure:
 ```typescript
 #!/usr/bin/env npx tsx
 
-import { SDK } from 'agent0-sdk';
-import { parseArgs, requireArg, /* ... */ handleError } from './lib/shared.js';
+import { parseArgs, requireArg, createSdk, handleError } from './lib/shared.js';
 
 async function main() {
   // 1. Parse CLI args
@@ -176,8 +191,8 @@ async function main() {
   const agentId = requireArg(args, 'agent-id', 'agent to load');
   validateAgentId(agentId);
 
-  // 3. Build SDK config
-  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl }));
+  // 3. Create SDK instance (includes env overrides automatically)
+  const sdk = createSdk({ chainId, rpcUrl });
 
   // 4. Call SDK methods
   const agent = await sdk.loadAgent(agentId);
@@ -192,7 +207,7 @@ main().catch(handleError);
 
 Write operations add:
 - `loadWalletProvider(chainId)` to restore or initiate WalletConnect session
-- `walletProvider` passed to `buildSdkConfig()` for signing
+- `walletProvider` passed to `createSdk()` for signing
 - Progress reporting to stderr (`{"status":"submitted","txHash":"0x..."}`)
 - `waitMined({ timeoutMs: 120_000 })` on transaction handles
 
@@ -223,6 +238,7 @@ Write operations add:
                   | wallet.ts --action set    |  Set wallet
                   | wallet.ts --action unset  |  Unset wallet
                   | verify.ts --action sign   |  Sign identity proof
+                  | transfer.ts               |  Transfer agent ownership
                   +---------------------------+
 
                   +---------------------------+
@@ -236,7 +252,7 @@ Write operations add:
 Write scripts all follow the same transaction lifecycle:
 
 ```
-loadWalletProvider() -> SDK init with walletProvider -> build tx -> submit ->
+loadWalletProvider() -> createSdk({ walletProvider }) -> build tx -> submit ->
   stderr: {"status":"submitted","txHash":"0x..."} ->
   user approves in wallet app ->
   waitMined(120s) -> stdout: result JSON
@@ -244,7 +260,8 @@ loadWalletProvider() -> SDK init with walletProvider -> build tx -> submit ->
 
 ### Script-specific Notes
 
-- **check-env.ts** -- Only script that does not use `agent0-sdk` SDK class. Reports WalletConnect session status, connected address, and configured env vars.
+- **transfer.ts** -- Transfers agent ownership to a new address. Requires WalletConnect session. Uses the ERC-721 `transferFrom` call.
+- **check-env.ts** -- Only script that does not use `agent0-sdk` SDK class. Reports WalletConnect session status, connected address, configured env vars, and security warnings (`.env` permissions, config file permissions, cloud-sync detection).
 - **search.ts** -- Dual-mode: semantic search (POST to `https://agent0-semantic-search.dawid-pisarczyk.workers.dev/api/v1/search`, no SDK needed) or subgraph search (SDK `searchAgents`). Routes based on presence of `--query` flag.
 - **wallet.ts** -- Tri-modal (`--action get|set|unset`). The `set` action signs via WalletConnect, or accepts a `--signature` flag with a pre-generated EIP-712 signature.
 - **update-agent.ts** -- Loads existing agent, applies mutations, re-publishes. Validates at least one mutation flag is present.
@@ -406,6 +423,12 @@ See [reference/security.md](../reference/security.md) for the full security mode
 +---------------------+-----------------------------------+--------------------+
 | RPC endpoint        | Man-in-the-middle                 | HTTPS endpoints    |
 +---------------------+-----------------------------------+--------------------+
+| .env file           | Secrets readable by other users   | Permission check   |
+|                     |                                   | (warn if not 600)  |
++---------------------+-----------------------------------+--------------------+
+| On-chain data       | Prompt injection via agent name/  | sanitizeString()   |
+|                     | description / metadata fields     | in buildAgentDetails|
++---------------------+-----------------------------------+--------------------+
 | EIP-712 wallet set  | Replay / expired signature        | 300s deadline      |
 +---------------------+-----------------------------------+--------------------+
 ```
@@ -483,13 +506,15 @@ Setting an agent wallet requires a typed signature from the target wallet:
 
 ### Supported Chains
 
-3 chains supported by the SDK (`agent0-sdk`):
+5 chains supported by the SDK (`agent0-sdk`):
 
 | Chain | Chain ID | SDK Support |
 |-------|----------|-------------|
 | Ethereum Mainnet | 1 | Full (registry + subgraph) |
 | Ethereum Sepolia | 11155111 | Full (registry + subgraph) |
 | Polygon Mainnet | 137 | Full (registry + subgraph) |
+| Base Mainnet | 8453 | Full (registry + subgraph) |
+| Base Sepolia | 84532 | Full (registry + subgraph) |
 
 Additional chains (8 mainnets, 11 testnets) have contracts deployed but are not yet supported by the SDK. See [`reference/chains.md`](../reference/chains.md) for the full list, contract addresses, subgraph URLs, and RPC endpoints.
 

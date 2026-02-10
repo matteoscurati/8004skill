@@ -10,7 +10,7 @@
 import { existsSync, realpathSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { handleError, SCRIPT_VERSION, validateConfig, outputJson, DOT_ENV_PATH } from './lib/shared.js';
+import { handleError, SCRIPT_VERSION, validateConfig, outputJson, DOT_ENV_PATH, formatPermissions } from './lib/shared.js';
 import { getSessionInfo, getWcStoragePath } from './lib/walletconnect.js';
 
 // ── Security warnings ──────────────────────────────────────────────
@@ -61,6 +61,22 @@ function detectCloudSync(): string | null {
   );
 }
 
+function checkDotenvPermissions(): string | null {
+  if (!existsSync(DOT_ENV_PATH)) return null;
+  try {
+    const st = statSync(DOT_ENV_PATH);
+    if ((st.mode & 0o077) !== 0) {
+      return (
+        `.env file ${DOT_ENV_PATH} has permissions ${formatPermissions(st.mode)} (expected 600). ` +
+        'Group or other users may be able to read IPFS secrets. Run: chmod 600 ' + DOT_ENV_PATH
+      );
+    }
+  } catch {
+    return `Could not stat ${DOT_ENV_PATH}; .env permission check skipped.`;
+  }
+  return null;
+}
+
 function checkConfigFile(): string[] {
   const configPath = join(homedir(), '.8004skill', 'config.json');
   const warnings: string[] = [];
@@ -78,10 +94,9 @@ function checkConfigFile(): string[] {
       );
     }
 
-    const permBits = st.mode & 0o777;
-    if (permBits & 0o077) {
+    if ((st.mode & 0o077) !== 0) {
       warnings.push(
-        `Config file ${configPath} has permissions ${permBits.toString(8).padStart(3, '0')} (expected 600). ` +
+        `Config file ${configPath} has permissions ${formatPermissions(st.mode)} (expected 600). ` +
           'Group or other users may be able to read it. Run: chmod 600 ' + configPath,
       );
     }
@@ -105,6 +120,7 @@ function main(): void {
   const warnings = [
     detectOpenClaw(),
     detectCloudSync(),
+    checkDotenvPermissions(),
     ...checkConfigFile(),
   ].filter((w): w is string => w !== null);
 

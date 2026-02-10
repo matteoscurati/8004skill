@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildSearchFilters } from '../../scripts/search.js';
+import { buildSearchFilters } from '../../scripts/lib/filters.js';
 
 let exitSpy: ReturnType<typeof vi.spyOn>;
 

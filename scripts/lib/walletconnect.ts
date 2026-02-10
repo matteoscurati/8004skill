@@ -118,6 +118,16 @@ export async function initWalletConnectProvider(opts: {
   projectId?: string;
 }): Promise<EthereumProvider> {
   const projectId = opts.projectId || resolveProjectId();
+
+  if (projectId === DEFAULT_PROJECT_ID) {
+    console.error(JSON.stringify({
+      status: 'info',
+      message: 'Using default WalletConnect project ID (shared across all users). ' +
+        'For production use, set your own via WC_PROJECT_ID env var or the Configure operation. ' +
+        'Get a free project ID at https://cloud.walletconnect.com',
+    }));
+  }
+
   const storage = new FileSystemStorage();
 
   const providerOpts: EthereumProviderOptions = {

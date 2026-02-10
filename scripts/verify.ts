@@ -17,15 +17,13 @@
 
 import { randomBytes } from 'node:crypto';
 import { verifyMessage } from 'viem';
-import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
   requireChainId,
   validateAgentId,
   validateSignature,
-  buildSdkConfig,
-  getOverridesFromEnv,
+  createSdk,
   exitWithError,
   loadWalletProvider,
   handleError,
@@ -71,7 +69,7 @@ async function main() {
     const walletProvider = await loadWalletProvider(chainId);
     const signerAddress = getConnectedAddress(walletProvider);
 
-    const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, walletProvider, ...getOverridesFromEnv(chainId) }));
+    const sdk = createSdk({ chainId, rpcUrl, walletProvider });
     const agent = await sdk.loadAgent(agentId);
     const onChainWallet = await agent.getWallet();
 
@@ -99,7 +97,7 @@ async function main() {
     validateSignature(signature);
     const message = requireArg(args, 'message', 'signed message');
 
-    const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
+    const sdk = createSdk({ chainId, rpcUrl });
     const agent = await sdk.loadAgent(agentId);
     const onChainWallet = await agent.getWallet();
 

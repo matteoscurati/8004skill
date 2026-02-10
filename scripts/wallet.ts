@@ -22,7 +22,6 @@
  *     --chain-id 11155111 --rpc-url https://rpc.sepolia.org
  */
 
-import { SDK } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
@@ -30,8 +29,7 @@ import {
   validateAgentId,
   validateAddress,
   validateSignature,
-  buildSdkConfig,
-  getOverridesFromEnv,
+  createSdk,
   exitWithError,
   loadWalletProvider,
   handleError,
@@ -49,14 +47,14 @@ async function main() {
   const chainId = requireChainId(args['chain-id']);
 
   if (action === 'get') {
-    const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, ...getOverridesFromEnv(chainId) }));
+    const sdk = createSdk({ chainId, rpcUrl });
     const agent = await sdk.loadAgent(agentId);
     const wallet = await agent.getWallet();
     outputJson({ agentId, walletAddress: wallet || null, action: 'get' });
     return;
   }
   const walletProvider = await loadWalletProvider(chainId);
-  const sdk = new SDK(buildSdkConfig({ chainId, rpcUrl, walletProvider, ...getOverridesFromEnv(chainId) }));
+  const sdk = createSdk({ chainId, rpcUrl, walletProvider });
   const agent = await sdk.loadAgent(agentId);
 
   emitWalletPrompt();

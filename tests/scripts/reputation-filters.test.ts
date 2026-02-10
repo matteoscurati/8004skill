@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildFeedbackFilters } from '../../scripts/reputation.js';
+import { buildFeedbackFilters } from '../../scripts/lib/filters.js';
 
 beforeEach(() => {
   vi.spyOn(process, 'exit').mockImplementation((code) => {
