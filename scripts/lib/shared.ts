@@ -427,6 +427,7 @@ interface AgentLike {
 
 interface RegFileLike {
   active: boolean;
+  x402support?: boolean;
   trustModels?: unknown;
   owners?: unknown;
   endpoints?: unknown;
@@ -446,6 +447,7 @@ export function buildAgentDetails(
     description: sDesc.value,
     image: agent.image,
     active: regFile.active,
+    x402support: regFile.x402support ?? false,
     mcpEndpoint: agent.mcpEndpoint,
     a2aEndpoint: agent.a2aEndpoint,
     ensName: agent.ensEndpoint,

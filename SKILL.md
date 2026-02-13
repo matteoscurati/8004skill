@@ -1,7 +1,24 @@
 ---
 name: 8004skill
 description: Use when the user asks to register, search, update, or inspect on-chain agents, manage reputation feedback, agent wallets, or verify identity on EVM chains via ERC-8004.
-metadata: {"npm":{"package":"8004skill","postInstall":"npm install --omit=dev"},"openclaw":{"emoji":"🔗","homepage":"https://github.com/matteoscurati/8004skill","os":["darwin","linux"],"requires":{"bins":["node","npx"]},"install":[{"id":"brew","kind":"brew","formula":"node","bins":["node","npx"],"label":"Install Node.js (brew)"}]}}
+metadata:
+  author: matteoscurati
+  version: "1.4.0"
+  npm:
+    package: 8004skill
+    postInstall: npm install --omit=dev
+  openclaw:
+    emoji: "🔗"
+    homepage: https://github.com/matteoscurati/8004skill
+    os: [darwin, linux]
+    requires:
+      bins: [node, npx]
+    install:
+      - id: brew
+        kind: brew
+        formula: node
+        bins: [node, npx]
+        label: Install Node.js (brew)
 ---
 
 # 8004skill - ERC-8004 Agent Economy
@@ -13,6 +30,7 @@ Reference files (read as needed):
 - `{baseDir}/reference/chains.md` — supported chains, RPC endpoints
 - `{baseDir}/reference/sdk-api.md` — agent0-sdk API surface
 - `{baseDir}/reference/agent-schema.md` — ERC-8004 data structures
+- `{baseDir}/reference/x402-integration.md` — x402 payment protocol, awal CLI compatibility
 
 ---
 
@@ -257,7 +275,7 @@ Both require confirmation. Revoke result: txHash. Respond result: txHash, agentI
 
 ## Operation 6: Inspect Agent (Reputation + Connect)
 
-**Triggered by**: "check reputation", "inspect agent", "how good is agent X".
+**Triggered by**: "check reputation", "inspect agent", "how good is agent X", "x402 status", "payment status".
 
 ### Execution
 
@@ -270,6 +288,16 @@ npx tsx {baseDir}/scripts/reputation.ts --agent-id <agentId> --chain-id <chainId
 
 ### Result
 Show: agent name/ID, active status, trust label with rating, recent feedback table (Reviewer, Rating, Tags, Text), OASF skills/domains, web/email endpoints. If MCP endpoint: show URL, tools, config snippet. If A2A: show agent card URL and skills.
+
+### X402 Payment Status
+
+For agents with x402 support, check payment readiness:
+
+```
+npx tsx {baseDir}/scripts/x402-status.ts --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl>
+```
+
+Shows: x402 enabled/disabled, payment readiness (wallet + active + endpoints), wallet address, monetizable endpoints, ready-to-use awal CLI commands. See `{baseDir}/reference/x402-integration.md` for the full workflow.
 
 ---
 
