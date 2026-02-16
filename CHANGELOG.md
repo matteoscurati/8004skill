@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2025-07-15
+
+### Added
+
+- **Skills CLI as primary install method** — `npx skills add` now recommended for Claude Code, Cursor, Codex, and 35+ agents
+- **x402 payment status bridge** — new `x402-status.ts` read-only script checks agent payment readiness (x402support, wallet, active, endpoints) and generates setup commands
+- **x402support field** in `buildAgentDetails` output
+- **14 new unit tests** for x402 status script
+
+### Changed
+
+- **Install docs updated** — Skills CLI promoted as primary path; npx and source kept as alternatives; deprecated `openskills` command removed
+
+### Fixed
+
+- **Reference docs** — added x402 reference documentation
+
+## [1.3.0] - 2025-07-01
+
+### Added
+
+- **Transfer script** (`transfer.ts`) — transfer agent ownership to a new address
+- **Filter extraction** — search and reputation filter builders extracted into `lib/filters.ts` for reuse and testability
+- **`createSdk()` convenience** — replaced 13 manual SDK init sites with a single helper
+- **`isMainScript()` utility** — shared guard for conditional `main()` execution
+- **`formatPermissions()` utility** — shared helper for displaying .env permissions
+- **Undici override** — transitive vulnerability fix
+
+### Changed
+
+- **Security hardening** — untrusted data sanitization (`sanitizeString` in `buildAgentDetails`), `.env` permission check at runtime
+- **WalletConnect** — default project ID warning added
+- **Documentation** — synced all docs with codebase changes
+
+## [1.2.0] - 2025-06-15
+
+### Added
+
+- **Inline IPFS credential prompt** — when IPFS env vars are missing, the agent asks for credentials during the operation (not persisted); security reminder shown after each use
+- **Polygon built-in registry addresses** — deterministic CREATE2 addresses hardcoded as fallback, removing the need for manual env var config
+
+### Changed
+
+- **Env vars still take precedence** over built-in Polygon addresses
+- **Documentation** — updated to reflect full Polygon support
+
 ## [1.1.0] - 2025-05-28
 
 ### Added
