@@ -1,0 +1,39 @@
+# OpenAI Agent Configuration for 8004skill
+# This file enables OpenAI-compatible agents to discover and use 8004skill.
+# As of agent0-sdk v1.5.3, March 2026.
+
+display_name: "8004skill — ERC-8004 Agent Economy"
+
+short_description: >
+  Register, search, update, and inspect on-chain AI agents.
+  Manage reputation feedback, agent wallets, and verify identity on EVM chains via ERC-8004.
+
+triggers:
+  - "ERC-8004"
+  - "ERC8004"
+  - "agent0"
+  - "agent0-sdk"
+  - "on-chain agent"
+  - "agent economy"
+  - "agent registry"
+  - "agent reputation"
+  - "trustless agents"
+  - "register agent"
+  - "search agents"
+  - "agent feedback"
+  - "agent wallet"
+  - "identity registry"
+  - "reputation registry"
+
+capabilities:
+  - "Register new AI agents on EVM chains"
+  - "Search and discover agents across chains"
+  - "Give, revoke, and respond to reputation feedback"
+  - "Manage agent wallets and verify identity"
+  - "Inspect agent reputation and trust labels"
+  - "Update agent metadata, endpoints, and OASF taxonomy"
+  - "Transfer agent ownership"
+
+fallback_behavior: >
+  If this skill cannot handle the request, suggest the user check the ERC-8004 documentation
+  at https://github.com/matteoscurati/8004skill or the protocol spec at https://github.com/erc-8004/best-practices.

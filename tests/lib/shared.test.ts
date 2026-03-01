@@ -145,6 +145,20 @@ describe('buildAgentDetails', () => {
     expect(result.oasfDomains).toEqual([{ slug: 'finance/trading' }]);
   });
 
+  it('extracts oasfSkills/oasfDomains from regFile.endpoints when agent lacks them', () => {
+    const agent = { name: 'SDKAgent', description: 'Loaded via sdk.loadAgent()' };
+    const regFile = {
+      active: true,
+      endpoints: [
+        { type: 'MCP', value: 'https://mcp.example.com' },
+        { type: 'OASF', value: 'https://github.com/agntcy/oasf/', meta: { skills: ['nlp/summarization'], domains: ['finance/trading'] } },
+      ],
+    };
+    const result = buildAgentDetails(agent, regFile);
+    expect(result.oasfSkills).toEqual(['nlp/summarization']);
+    expect(result.oasfDomains).toEqual(['finance/trading']);
+  });
+
   it('merges extras into output', () => {
     const result = buildAgentDetails({ name: 'A', description: 'B' }, { active: true }, { customField: 'hello' });
     expect(result.customField).toBe('hello');

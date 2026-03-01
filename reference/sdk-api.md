@@ -1,5 +1,7 @@
 # agent0-sdk API Reference
 
+> As of agent0-sdk v1.5.3, March 2026.
+
 ## SDK Class
 
 ```typescript
@@ -35,7 +37,7 @@ sdk.prepareFeedbackFile(input: { text?, capability?, name?, skill?, task? }): Fe
 sdk.getReputationSummary(agentId, tag1?, tag2?): Promise<{ count: number, averageValue: number }>
 
 // Ownership
-sdk.transferAgent(agentId, newOwner): Promise<TransactionHandle>
+sdk.transferAgent(agentId, newOwner): Promise<TransactionHandle<{ txHash: string; from: Address; to: Address; agentId: AgentId }>>
 sdk.isAgentOwner(agentId, address): Promise<boolean>
 sdk.getAgentOwner(agentId): Promise<Address>
 
@@ -71,97 +73,11 @@ sdk.registries(): Record<string, Address>
 ```typescript
 const handle = await agent.registerIPFS();
 handle.hash     // transaction hash (0x...)
-await handle.waitMined(opts?)   // wait for confirmation, returns { result: T }
+await handle.waitMined(opts?)   // wait for confirmation, returns { receipt: ChainReceipt, result: T }
 // TransactionWaitOptions: { timeoutMs?: number (default 120000), confirmations?: number (default 1), throwOnRevert?: boolean (default true) }
 ```
 
-## AgentSummary
+## Related References
 
-Returned by `sdk.searchAgents()` and `sdk.getAgent()`. Contains subgraph data including fields not available on the `Agent` class.
-
-```typescript
-{
-  chainId: number, agentId: string, name: string, description: string, image?: string,
-  owners: Address[], operators: Address[],
-  // Endpoints (short names — differs from Agent class which uses mcpEndpoint, a2aEndpoint, etc.)
-  mcp?: string, a2a?: string, web?: string, email?: string, ens?: string, did?: string, walletAddress?: string,
-  // Capabilities (non-optional arrays, default [])
-  supportedTrusts: string[], a2aSkills: string[], mcpTools: string[], mcpPrompts: string[],
-  mcpResources: string[], oasfSkills: string[], oasfDomains: string[],
-  // Status
-  active: boolean, x402support: boolean,
-  // Metadata
-  createdAt?: number, updatedAt?: number, lastActivity?: number,
-  agentURI?: string, agentURIType?: string,
-  feedbackCount?: number, averageValue?: number, semanticScore?: number,
-  extras: Record<string, any>,
-}
-```
-
-## SearchFilters
-
-```typescript
-{
-  chains?: number[] | 'all', agentIds?: AgentId[], name?: string, description?: string,
-  owners?: Address[], operators?: Address[], walletAddress?: Address,
-  // Endpoint filters
-  hasRegistrationFile?: boolean, hasWeb?: boolean, hasMCP?: boolean, hasA2A?: boolean,
-  hasOASF?: boolean, hasEndpoints?: boolean,
-  webContains?: string, mcpContains?: string, a2aContains?: string, ensContains?: string, didContains?: string,
-  // Capability filters
-  supportedTrust?: string[], a2aSkills?: string[], mcpTools?: string[], mcpPrompts?: string[], mcpResources?: string[],
-  oasfSkills?: string[], oasfDomains?: string[],
-  // Status & time
-  active?: boolean, x402support?: boolean,
-  registeredAtFrom?: Date | string | number, registeredAtTo?: Date | string | number,
-  updatedAtFrom?: Date | string | number, updatedAtTo?: Date | string | number,
-  // Metadata & keyword
-  hasMetadataKey?: string, metadataValue?: { key: string, value: string }, keyword?: string,
-  feedback?: FeedbackFilters,
-}
-```
-
-## SearchOptions
-
-```typescript
-{ sort?: string[], semanticMinScore?: number, semanticTopK?: number }
-```
-
-## FeedbackSearchFilters & FeedbackSearchOptions
-
-```typescript
-// FeedbackSearchFilters
-{ agentId?: AgentId, agents?: AgentId[], tags?: string[], reviewers?: Address[],
-  capabilities?: string[], skills?: string[], tasks?: string[], names?: string[], includeRevoked?: boolean }
-
-// FeedbackSearchOptions
-{ minValue?: number, maxValue?: number }
-```
-
-## FeedbackFilters (SearchFilters sub-filter)
-
-Used as `SearchFilters.feedback` to filter agents by feedback characteristics.
-
-```typescript
-{ hasFeedback?: boolean, hasNoFeedback?: boolean, includeRevoked?: boolean,
-  minValue?: number, maxValue?: number, minCount?: number, maxCount?: number,
-  fromReviewers?: Address[], endpoint?: string, hasResponse?: boolean,
-  tag1?: string, tag2?: string, tag?: string }
-```
-
-## Enums
-
-`EndpointType`: MCP, A2A, ENS, DID, WALLET, OASF
-`TrustModel`: reputation, crypto-economic, tee-attestation
-
-## Feedback
-
-```typescript
-{
-  id: [AgentId, Address, number], agentId: string, reviewer: Address, txHash?: string,
-  value?: number, tags: string[], endpoint?: string, text?: string,
-  context?: Record<string, any>, proofOfPayment?: Record<string, any>, fileURI?: string,
-  createdAt: number, answers: Array<Record<string, any>>, isRevoked: boolean,
-  capability?: string, name?: string, skill?: string, task?: string,
-}
-```
+- `search-filters.md` — SearchFilters, FeedbackFilters, SearchOptions
+- `sdk-types.md` — AgentSummary, Feedback, Enums

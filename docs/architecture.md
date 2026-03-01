@@ -262,7 +262,7 @@ loadWalletProvider() -> createSdk({ walletProvider }) -> build tx -> submit ->
 
 - **transfer.ts** -- Transfers agent ownership to a new address. Requires WalletConnect session. Uses the ERC-721 `transferFrom` call.
 - **check-env.ts** -- Only script that does not use `agent0-sdk` SDK class. Reports WalletConnect session status, connected address, configured env vars, and security warnings (`.env` permissions, config file permissions, cloud-sync detection).
-- **search.ts** -- Dual-mode: semantic search (POST to `https://agent0-semantic-search.dawid-pisarczyk.workers.dev/api/v1/search`, no SDK needed) or subgraph search (SDK `searchAgents`). Routes based on presence of `--query` flag.
+- **search.ts** -- Unified search via `sdk.searchAgents()`. Semantic search is triggered by `--keyword` (SDK calls `semantic-search.ag0.xyz` internally, then enriches results from subgraph). All filters (`--mcp-only`, `--active`, etc.) work with both semantic and structured search. Output is always `AgentSummary[]`.
 - **wallet.ts** -- Tri-modal (`--action get|set|unset`). The `set` action signs via WalletConnect, or accepts a `--signature` flag with a pre-generated EIP-712 signature.
 - **update-agent.ts** -- Loads existing agent, applies mutations, re-publishes. Validates at least one mutation flag is present.
 - **connect.ts** -- Combines agent details + reputation summary in a single response. Used for the "Inspect Agent" operation.
@@ -289,13 +289,12 @@ stdout: { agentId: "11155111:42", txHash: "0x...", uri: "ipfs://..." }
 ### Search (read)
 
 ```
-                    Semantic Path                          Subgraph Path
-                    -------------                          --------------
---query "..."  ->   POST semantic search API               --name "..."  ->  sdk.searchAgents()
-                    (vector similarity)                    (indexed query via The Graph)
-                         |                                       |
-                         v                                       v
-                    JSON array of AgentSummary objects
+--keyword "..."  ->  sdk.searchAgents({ keyword })  ->  semantic search (vector similarity)
+                                                         + subgraph enrichment (full AgentSummary)
+--name "..."     ->  sdk.searchAgents({ name })     ->  subgraph query (The Graph)
+                                                         |
+                                                         v
+                                                    AgentSummary[]
 ```
 
 ### Feedback (write)

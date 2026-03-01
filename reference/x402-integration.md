@@ -1,5 +1,7 @@
 # X402 Payment Integration
 
+> As of agent0-sdk v1.5.3, March 2026.
+
 ## What is X402?
 
 X402 is an HTTP-based payment protocol (HTTP 402 Payment Required) enabling pay-per-request access to agent endpoints. Payments settle in USDC on Base (chain 8453). An agent exposes a monetizable endpoint; a client discovers the price via HTTP 402 and pays on-chain to unlock the response.

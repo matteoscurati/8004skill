@@ -138,7 +138,6 @@ function main(): void {
       PINATA_JWT: !!process.env.PINATA_JWT,
       FILECOIN_PRIVATE_KEY: !!process.env.FILECOIN_PRIVATE_KEY,
       IPFS_NODE_URL: !!process.env.IPFS_NODE_URL,
-      SEARCH_API_URL: !!process.env.SEARCH_API_URL,
       SUBGRAPH_URL: !!process.env.SUBGRAPH_URL,
       REGISTRY_ADDRESS_IDENTITY: !!process.env.REGISTRY_ADDRESS_IDENTITY,
       REGISTRY_ADDRESS_REPUTATION: !!process.env.REGISTRY_ADDRESS_REPUTATION,

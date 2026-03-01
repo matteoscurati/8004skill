@@ -1,5 +1,7 @@
 # Security Rules
 
+> As of agent0-sdk v1.5.3, March 2026.
+
 ## Secret Handling (mandatory — all environments)
 
 - **NEVER** accept, request, or prompt the user to type, paste, or share a private key, mnemonic, seed phrase, or password in chat. Refuse immediately — chat history is stored and secrets would be permanently exposed.
@@ -40,7 +42,6 @@ Secrets (`PINATA_JWT`, `FILECOIN_PRIVATE_KEY`) should never be hardcoded or comm
 | `PINATA_JWT` | IPFS via Pinata | JWT for Pinata IPFS pinning |
 | `FILECOIN_PRIVATE_KEY` | IPFS via Filecoin | Private key for Filecoin pinning |
 | `IPFS_NODE_URL` | IPFS via local node | IPFS node API URL |
-| `SEARCH_API_URL` | Semantic search (optional) | Override semantic search API URL |
 | `SUBGRAPH_URL` | Non-default chains | Subgraph URL override |
 | `REGISTRY_ADDRESS_IDENTITY` | Non-default chains | Identity registry address override |
 | `REGISTRY_ADDRESS_REPUTATION` | Non-default chains | Reputation registry address override |

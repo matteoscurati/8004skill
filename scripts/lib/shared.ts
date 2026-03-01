@@ -441,6 +441,11 @@ export function buildAgentDetails(
   const sName = sanitizeString(agent.name, 500);
   const sDesc = sanitizeString(agent.description, 2000);
 
+  // The SDK Agent class doesn't expose oasfSkills/oasfDomains getters.
+  // Fall back to extracting from the OASF endpoint in regFile.endpoints.
+  const endpoints = Array.isArray(regFile.endpoints) ? regFile.endpoints : [];
+  const oasfEp = endpoints.find((e: { type?: string }) => e.type === 'OASF');
+
   return {
     agentId: agent.agentId,
     name: sName.value,
@@ -457,8 +462,8 @@ export function buildAgentDetails(
     mcpPrompts: agent.mcpPrompts ?? [],
     mcpResources: agent.mcpResources ?? [],
     a2aSkills: agent.a2aSkills ?? [],
-    oasfSkills: agent.oasfSkills ?? [],
-    oasfDomains: agent.oasfDomains ?? [],
+    oasfSkills: agent.oasfSkills ?? (oasfEp as { meta?: { skills?: unknown[] } })?.meta?.skills ?? [],
+    oasfDomains: agent.oasfDomains ?? (oasfEp as { meta?: { domains?: unknown[] } })?.meta?.domains ?? [],
     trustModels: regFile.trustModels,
     owners: regFile.owners,
     endpoints: regFile.endpoints,

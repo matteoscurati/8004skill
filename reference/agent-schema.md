@@ -1,5 +1,7 @@
 # ERC-8004 Data Structures
 
+> As of agent0-sdk v1.5.3, March 2026.
+
 ## Agent Registration File (IPFS/HTTP metadata)
 
 > The ERC-8004 spec uses `services` as the key for endpoints. The SDK accepts both `services` and `endpoints` when reading, and normalizes to `endpoints` internally.
@@ -21,7 +23,7 @@
 
 ## Agent Summary / Feedback / Reputation Summary
 
-See `AgentSummary`, `Feedback`, and `getReputationSummary()` types in sdk-api.md.
+See `AgentSummary`, `Feedback`, and `getReputationSummary()` types in `sdk-types.md`.
 
 ## Feedback File (off-chain enrichment, uploaded to IPFS)
 
