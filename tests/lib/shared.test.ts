@@ -16,7 +16,6 @@ import {
   getOverridesFromEnv,
   validateIpfsEnv,
   tryCatch,
-  fetchWithRetry,
   exitWithError,
   outputJson,
   isMainScript,
@@ -450,65 +449,6 @@ describe('tryCatch', () => {
   it('returns error message on failure', async () => {
     const result = await tryCatch(async () => { throw new Error('boom'); });
     expect(result).toEqual({ error: 'boom' });
-  });
-});
-
-describe('fetchWithRetry', () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('returns response on first 200', async () => {
-    fetchMock.mockResolvedValueOnce(new Response('ok', { status: 200 }));
-    const res = await fetchWithRetry('https://example.com', {});
-    expect(res.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('retries on 429 then returns 200', async () => {
-    fetchMock
-      .mockResolvedValueOnce(new Response('', { status: 429 }))
-      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
-    const promise = fetchWithRetry('https://example.com', {});
-    await vi.advanceTimersByTimeAsync(2_000);
-    const res = await promise;
-    expect(res.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('returns last 500 response after max retries', async () => {
-    fetchMock.mockResolvedValue(new Response('error', { status: 500 }));
-    const promise = fetchWithRetry('https://example.com', {});
-    await vi.advanceTimersByTimeAsync(10_000);
-    const res = await promise;
-    expect(res.status).toBe(500);
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-  });
-
-  it('retries on network error then returns 200', async () => {
-    fetchMock
-      .mockRejectedValueOnce(new Error('network'))
-      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
-    const promise = fetchWithRetry('https://example.com', {});
-    await vi.advanceTimersByTimeAsync(2_000);
-    const res = await promise;
-    expect(res.status).toBe(200);
-  });
-
-  it('throws immediately on AbortError', async () => {
-    const abortError = new Error('aborted');
-    abortError.name = 'AbortError';
-    fetchMock.mockRejectedValueOnce(abortError);
-    await expect(fetchWithRetry('https://example.com', {})).rejects.toThrow('aborted');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

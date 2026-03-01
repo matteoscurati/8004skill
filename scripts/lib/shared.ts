@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, basename } from 'node:path';
-import { SDK } from 'agent0-sdk';
+import { SDK, EndpointType } from 'agent0-sdk';
 import type { SDKConfig, TransactionHandle, TransactionWaitOptions } from 'agent0-sdk';
 import type EthereumProvider from '@walletconnect/ethereum-provider';
 import { isAddress } from 'viem';
@@ -171,49 +171,6 @@ export function validateIpfsProvider(raw: string): IpfsProvider {
   if (!VALID_IPFS.includes(raw as IpfsProvider))
     exitWithError(`Invalid --ipfs "${raw}". Must be: ${VALID_IPFS.join(', ')}`);
   return raw as IpfsProvider;
-}
-
-// ── Fetch with retry ────────────────────────────────────────────────
-
-const RETRY_MAX = 3;
-const RETRY_BASE_MS = 1_000;
-
-export async function fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
-  let lastError: unknown;
-  let lastResponse: Response | undefined;
-
-  for (let attempt = 0; attempt <= RETRY_MAX; attempt++) {
-    if (attempt > 0) {
-      await sleep(retryDelay(lastResponse, attempt - 1));
-    }
-
-    try {
-      lastResponse = await fetch(url, options);
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') throw err;
-      lastError = err;
-      continue;
-    }
-
-    const isRetryable = lastResponse.status === 429 || lastResponse.status >= 500;
-    if (!isRetryable) return lastResponse;
-  }
-
-  if (lastResponse) return lastResponse;
-  throw lastError;
-}
-
-function retryDelay(response: Response | undefined, retryIndex: number): number {
-  const retryAfter = response?.headers.get('retry-after');
-  if (retryAfter) {
-    const seconds = parseInt(retryAfter, 10);
-    return Math.min(Number.isNaN(seconds) ? RETRY_BASE_MS : seconds * 1000, 30_000);
-  }
-  return RETRY_BASE_MS * 2 ** retryIndex;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }
 
 // ── SDK config builder ──────────────────────────────────────────────
@@ -444,7 +401,7 @@ export function buildAgentDetails(
   // The SDK Agent class doesn't expose oasfSkills/oasfDomains getters.
   // Fall back to extracting from the OASF endpoint in regFile.endpoints.
   const endpoints = Array.isArray(regFile.endpoints) ? regFile.endpoints : [];
-  const oasfEp = endpoints.find((e: { type?: string }) => e.type === 'OASF');
+  const oasfEp = endpoints.find((e: { type?: string }) => e.type === EndpointType.OASF);
 
   return {
     agentId: agent.agentId,

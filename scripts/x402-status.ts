@@ -98,8 +98,10 @@ async function main() {
   const agent = await sdk.loadAgent(agentId);
   const regFile = agent.getRegistrationFile();
 
-  const repResult = await tryCatch(() => sdk.getReputationSummary(agentId));
-  const walletResult = await tryCatch(() => agent.getWallet());
+  const [repResult, walletResult] = await Promise.all([
+    tryCatch(() => sdk.getReputationSummary(agentId)),
+    tryCatch(() => agent.getWallet()),
+  ]);
 
   const details = buildAgentDetails(agent, regFile, {
     chain: chainId,
