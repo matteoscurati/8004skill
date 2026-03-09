@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@walletconnect/ethereum-provider": "^2.23.4",
-    "agent0-sdk": "^1.5.3",
+    "agent0-sdk": "file:../../8004.dev/agent0-ts",
     "qrcode-terminal": "^0.12.0",
     "tsx": "^4.7.0"
   },

@@ -164,13 +164,36 @@ export function validateSignature(sig: string): void {
     exitWithError(`Invalid signature: "${sig}". Must be a 0x-prefixed hex string (at least 65 bytes).`);
 }
 
-const VALID_IPFS = ['pinata', 'filecoinPin', 'node'] as const;
+const VALID_IPFS = ['pinata', 'filecoinPin', 'node', 'helia'] as const;
 export type IpfsProvider = (typeof VALID_IPFS)[number];
 
 export function validateIpfsProvider(raw: string): IpfsProvider {
   if (!VALID_IPFS.includes(raw as IpfsProvider))
     exitWithError(`Invalid --ipfs "${raw}". Must be: ${VALID_IPFS.join(', ')}`);
   return raw as IpfsProvider;
+}
+
+export function parseEndpointType(raw: string): EndpointType {
+  const normalized = raw.trim().toLowerCase();
+  switch (normalized) {
+    case 'mcp':
+      return EndpointType.MCP;
+    case 'a2a':
+      return EndpointType.A2A;
+    case 'ens':
+      return EndpointType.ENS;
+    case 'did':
+      return EndpointType.DID;
+    case 'wallet':
+    case 'agentwallet':
+      return EndpointType.WALLET;
+    case 'oasf':
+      return EndpointType.OASF;
+    default:
+      exitWithError(
+        `Invalid endpoint type "${raw}". Must be one of: mcp, a2a, ens, did, wallet, oasf.`,
+      );
+  }
 }
 
 // ── SDK config builder ──────────────────────────────────────────────
@@ -208,6 +231,8 @@ export function buildSdkConfig(opts: {
       case 'node':
         if (!opts.ipfsNodeUrl) exitWithError('--ipfs-node-url or IPFS_NODE_URL env var required when using --ipfs node');
         config.ipfsNodeUrl = opts.ipfsNodeUrl;
+        break;
+      case 'helia':
         break;
     }
   }
@@ -473,6 +498,8 @@ export function validateIpfsEnv(config: IpfsConfig): void {
       break;
     case 'node':
       if (!config.ipfsNodeUrl) exitWithError('--ipfs-node-url or IPFS_NODE_URL env var required when using --ipfs node');
+      break;
+    case 'helia':
       break;
   }
 }

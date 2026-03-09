@@ -8,7 +8,6 @@
  *     --rpc-url https://rpc.sepolia.org --ipfs pinata --name "NewName"
  */
 
-import { EndpointType } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
@@ -24,6 +23,7 @@ import {
   outputJson,
   submitAndWait,
   emitWalletPrompt,
+  parseEndpointType,
 } from './lib/shared.js';
 
 const MUTATION_FLAGS = [
@@ -45,7 +45,18 @@ const MUTATION_FLAGS = [
   'x402',
   'metadata',
   'del-metadata',
+  'remove-endpoint-type',
+  'remove-endpoint-value',
+  'remove-all-endpoints',
 ] as const;
+
+function resolveStorage(args: Record<string, string>): 'ipfs' | 'http' | 'onchain' {
+  const storage = args['storage'] || (args['http-uri'] ? 'http' : 'ipfs');
+  if (storage !== 'ipfs' && storage !== 'http' && storage !== 'onchain') {
+    exitWithError(`Invalid --storage "${storage}". Must be one of: ipfs, http, onchain.`);
+  }
+  return storage;
+}
 
 async function main() {
   const args = parseArgs();
@@ -55,19 +66,28 @@ async function main() {
 
   const chainId = requireChainId(args['chain-id']);
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
+  const storage = resolveStorage(args);
   const ipfsConfig = extractIpfsConfig(args);
-  validateIpfsEnv(ipfsConfig);
+  const shouldRepublish =
+    args['storage'] !== undefined || args['http-uri'] !== undefined || args['ipfs'] !== undefined;
+  if (storage === 'ipfs') validateIpfsEnv(ipfsConfig);
 
   const hasMutation = MUTATION_FLAGS.some((f) => args[f] !== undefined);
-  if (!hasMutation) {
+  if (!hasMutation && !shouldRepublish) {
     exitWithError(
-      'No update flags provided. Use at least one of: ' + MUTATION_FLAGS.map((f) => `--${f}`).join(', '),
+      'No update flags provided. Use at least one of: ' +
+        [...MUTATION_FLAGS.map((f) => `--${f}`), '--storage', '--http-uri', '--ipfs'].join(', '),
     );
   }
 
   const walletProvider = await loadWalletProvider(chainId);
 
-  const sdk = createSdk({ chainId, rpcUrl, walletProvider, ipfs: ipfsConfig });
+  const sdk = createSdk({
+    chainId,
+    rpcUrl,
+    walletProvider,
+    ipfs: storage === 'ipfs' ? ipfsConfig : undefined,
+  });
 
   const agent = await sdk.loadAgent(agentId);
 
@@ -88,11 +108,11 @@ async function main() {
   }
 
   if (args['remove-mcp'] === 'true') {
-    agent.removeEndpoint({ type: EndpointType.MCP });
+    agent.removeEndpoint({ type: parseEndpointType('mcp') });
   }
 
   if (args['remove-a2a'] === 'true') {
-    agent.removeEndpoint({ type: EndpointType.A2A });
+    agent.removeEndpoint({ type: parseEndpointType('a2a') });
   }
 
   if (args['ens-endpoint']) {
@@ -100,7 +120,16 @@ async function main() {
   }
 
   if (args['remove-ens'] === 'true') {
-    agent.removeEndpoint({ type: EndpointType.ENS });
+    agent.removeEndpoint({ type: parseEndpointType('ens') });
+  }
+
+  if (args['remove-all-endpoints'] === 'true') {
+    agent.removeEndpoints();
+  } else if (args['remove-endpoint-type'] || args['remove-endpoint-value']) {
+    agent.removeEndpoint({
+      type: args['remove-endpoint-type'] ? parseEndpointType(args['remove-endpoint-type']) : undefined,
+      value: args['remove-endpoint-value'],
+    });
   }
 
   if (args['trust']) {
@@ -148,22 +177,23 @@ async function main() {
 
   const httpUri = args['http-uri'];
 
-  let handle;
-  if (ipfsConfig.ipfsProvider) {
-    handle = await agent.registerIPFS();
-  } else if (httpUri) {
-    handle = await agent.registerHTTP(httpUri);
-  } else {
-    exitWithError('--ipfs or --http-uri is required to re-publish updated agent');
-  }
+  const handle =
+    storage === 'onchain'
+      ? await agent.registerOnChain()
+      : storage === 'http'
+        ? await agent.registerHTTP(requireArg(args, 'http-uri', 'HTTP/data URI for --storage http'))
+        : ipfsConfig.ipfsProvider
+          ? await agent.registerIPFS()
+          : exitWithError('An IPFS provider is required when using --storage ipfs');
 
   const { result: regFile, txHash } = await submitAndWait(handle);
 
   outputJson({
     agentId: regFile.agentId,
     txHash,
-    uri: httpUri || regFile.agentURI,
+    uri: storage === 'http' ? httpUri : regFile.agentURI,
     updated: true,
+    storage,
   });
 }
 

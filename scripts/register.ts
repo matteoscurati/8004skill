@@ -26,6 +26,14 @@ import {
   emitWalletPrompt,
 } from './lib/shared.js';
 
+function resolveStorage(args: Record<string, string>): 'ipfs' | 'http' | 'onchain' {
+  const storage = args['storage'] || (args['http-uri'] ? 'http' : 'ipfs');
+  if (storage !== 'ipfs' && storage !== 'http' && storage !== 'onchain') {
+    exitWithError(`Invalid --storage "${storage}". Must be one of: ipfs, http, onchain.`);
+  }
+  return storage;
+}
+
 async function main() {
   const args = parseArgs();
 
@@ -33,8 +41,9 @@ async function main() {
   const rpcUrl = requireArg(args, 'rpc-url', 'RPC endpoint');
   const name = requireArg(args, 'name', 'agent name');
   const description = requireArg(args, 'description', 'agent description');
+  const storage = resolveStorage(args);
   const ipfsConfig = extractIpfsConfig(args);
-  validateIpfsEnv(ipfsConfig);
+  if (storage === 'ipfs') validateIpfsEnv(ipfsConfig);
   const mcpEndpoint = args['mcp-endpoint'];
   const a2aEndpoint = args['a2a-endpoint'];
   const active = args['active'] !== 'false';
@@ -47,7 +56,12 @@ async function main() {
 
   const walletProvider = await loadWalletProvider(chainId);
 
-  const sdk = createSdk({ chainId, rpcUrl, walletProvider, ipfs: ipfsConfig });
+  const sdk = createSdk({
+    chainId,
+    rpcUrl,
+    walletProvider,
+    ipfs: storage === 'ipfs' ? ipfsConfig : undefined,
+  });
 
   const agent = sdk.createAgent(name, description, image);
 
@@ -66,19 +80,23 @@ async function main() {
 
   emitWalletPrompt();
 
-  const handle = httpUri
-    ? await agent.registerHTTP(httpUri)
-    : ipfsConfig.ipfsProvider
-      ? await agent.registerIPFS()
-      : exitWithError('Either --ipfs or --http-uri is required for registration');
+  const handle =
+    storage === 'onchain'
+      ? await agent.registerOnChain()
+      : storage === 'http'
+        ? await agent.registerHTTP(requireArg(args, 'http-uri', 'HTTP/data URI for --storage http'))
+        : ipfsConfig.ipfsProvider
+          ? await agent.registerIPFS()
+          : exitWithError('An IPFS provider is required when using --storage ipfs');
 
   const { result: regFile, txHash } = await submitAndWait<RegistrationFile>(handle);
 
   outputJson({
     agentId: regFile.agentId,
     txHash,
-    uri: httpUri || regFile.agentURI,
+    uri: storage === 'http' ? httpUri : regFile.agentURI,
     chain: chainId,
+    storage,
   });
 }
 

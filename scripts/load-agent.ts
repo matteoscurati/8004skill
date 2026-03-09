@@ -28,15 +28,23 @@ async function main() {
   const sdk = createSdk({ chainId, rpcUrl });
   const agent = await sdk.loadAgent(agentId);
   const regFile = agent.getRegistrationFile();
+  const metadata = agent.getMetadata();
 
   const walletResult = await tryCatch(() => agent.getWallet());
   const walletAddress = walletResult.value || agent.walletAddress;
 
   const result = buildAgentDetails(agent, regFile, {
     walletAddress: walletAddress || null,
-    metadata: regFile.metadata,
+    wallet: {
+      address: walletAddress || null,
+    },
+    metadata,
+    registrationFile: regFile,
   });
-  if (walletResult.error) result.walletError = walletResult.error;
+  if (walletResult.error) {
+    result.walletError = walletResult.error;
+    (result.wallet as Record<string, unknown>).error = walletResult.error;
+  }
 
   outputJson(result);
 }

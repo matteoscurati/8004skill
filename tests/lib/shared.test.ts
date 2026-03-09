@@ -21,6 +21,7 @@ import {
   isMainScript,
   sanitizeString,
   createSdk,
+  parseEndpointType,
 } from '../../scripts/lib/shared.js';
 
 let exitSpy: ReturnType<typeof vi.spyOn>;
@@ -339,8 +340,24 @@ describe('validateIpfsProvider', () => {
     expect(validateIpfsProvider('pinata')).toBe('pinata');
   });
 
+  it('accepts helia as a built-in provider', () => {
+    expect(validateIpfsProvider('helia')).toBe('helia');
+  });
+
   it('exits on invalid provider', () => {
     expect(() => validateIpfsProvider('invalid')).toThrow('process.exit(1)');
+  });
+});
+
+describe('parseEndpointType', () => {
+  it('maps supported endpoint aliases', () => {
+    expect(parseEndpointType('mcp')).toBe('MCP');
+    expect(parseEndpointType('A2A')).toBe('A2A');
+    expect(parseEndpointType('agentwallet')).toBe('wallet');
+  });
+
+  it('exits on unsupported endpoint types', () => {
+    expect(() => parseEndpointType('smtp')).toThrow('process.exit(1)');
   });
 });
 
@@ -360,6 +377,15 @@ describe('buildSdkConfig', () => {
     });
     expect(config.ipfs).toBe('pinata');
     expect(config.pinataJwt).toBe('test-jwt');
+  });
+
+  it('accepts helia without extra credentials', () => {
+    const config = buildSdkConfig({
+      chainId: 1,
+      rpcUrl: 'https://eth.llamarpc.com',
+      ipfsProvider: 'helia',
+    });
+    expect(config.ipfs).toBe('helia');
   });
 
   it('exits when pinata is selected without JWT', () => {
@@ -433,6 +459,10 @@ describe('validateIpfsEnv', () => {
 
   it('passes when pinata provider has JWT', () => {
     expect(() => validateIpfsEnv({ ipfsProvider: 'pinata', pinataJwt: 'jwt' })).not.toThrow();
+  });
+
+  it('passes when helia is selected', () => {
+    expect(() => validateIpfsEnv({ ipfsProvider: 'helia' })).not.toThrow();
   });
 
   it('exits when pinata provider is missing JWT', () => {
