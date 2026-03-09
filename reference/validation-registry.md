@@ -1,6 +1,6 @@
 # Validation Registry
 
-> As of agent0-sdk v1.5.3, March 2026. Limited SDK support — contract functions are available on-chain but not yet wrapped in the SDK.
+> As of agent0-sdk v1.6.0, March 2026. Contract support exists, but the public `SDK` class still does not expose validation request/response helpers.
 
 ## Purpose
 
@@ -48,13 +48,13 @@ ValidationStatus {
 
 ## Current SDK Support
 
-As of v1.5.3, the SDK does not expose Validation Registry methods. To interact with it:
+As of v1.6.0, the public `agent0-sdk` package exposes `sdk.validationRegistryAddress()` but does not expose validation request/response/read wrappers on `SDK`. To interact with validation today:
 
 - Use the contract ABI directly via viem/ethers against the deployed addresses
-- Mainnet: same deterministic deployment as Identity and Reputation
-- The subgraph does index `ValidationRequest` and `ValidationResponse` events
+- Provide a `REGISTRY_ADDRESS_VALIDATION` override when working on chains where the validation registry is deployed
+- Use your own indexing layer or subgraph if you need query workflows around validation events
 
-This is expected to gain SDK wrapper methods in a future release. The 8004skill does not currently include validation operations.
+This is expected to gain first-class SDK wrapper methods in a future release. The 8004skill keeps validation as a reference-only area until those public APIs ship in the package itself.
 
 ## Use Cases
 

@@ -1,6 +1,6 @@
 # Answer Examples
 
-> As of agent0-sdk v1.5.3, March 2026.
+> As of agent0-sdk v1.6.0, March 2026.
 
 Model responses for common queries. Use these as templates for consistent, informative answers.
 

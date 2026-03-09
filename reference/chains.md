@@ -1,10 +1,10 @@
 # Supported Chains
 
-> As of agent0-sdk v1.5.3, March 2026.
+> As of agent0-sdk v1.6.0, March 2026.
 
 ## Full SDK Support
 
-These chains have built-in registry addresses and subgraph URLs. They work out of the box — no configuration overrides needed.
+These chains have built-in registry addresses and subgraph URLs. They work out of the box with the public SDK package — no configuration overrides needed.
 
 | Chain | Chain ID | Type | Notes |
 |-------|----------|------|-------|
@@ -16,9 +16,9 @@ These chains have built-in registry addresses and subgraph URLs. They work out o
 
 ## Deployed Chains (Manual Config)
 
-These chains have ERC-8004 contracts deployed (same deterministic CREATE2 addresses) but are **not yet indexed by the SDK subgraph**. To use them, set the `SUBGRAPH_URL` environment variable pointing to a subgraph instance for that chain. Optionally override registry addresses with `REGISTRY_ADDRESS_IDENTITY` / `REGISTRY_ADDRESS_REPUTATION` if they differ from defaults.
+These chains have ERC-8004 contracts deployed (same deterministic CREATE2 addresses) but are **not yet indexed by the SDK defaults**. To use them, set `SUBGRAPH_URL` to a subgraph instance for that chain. Optionally override registry addresses with `REGISTRY_ADDRESS_IDENTITY` / `REGISTRY_ADDRESS_REPUTATION` if they differ from defaults.
 
-All deployed chains use the standard CREATE2 addresses listed in the Contract Addresses section below.
+The public SDK defaults currently include Identity + Reputation addresses only. Validation registry addresses are not wired into the default package for these chains.
 
 ### Mainnets
 
@@ -34,7 +34,7 @@ All deployed chains use the standard CREATE2 addresses listed in the Contract Ad
 | Taiko | 167000 |
 | Linea | 59144 |
 | Mantle | 5000 |
-| Monad | 10143 |
+| Monad | 143 |
 | MegaETH | 40 |
 | Abstract | 2741 |
 
@@ -50,17 +50,18 @@ All deployed chains use the standard CREATE2 addresses listed in the Contract Ad
 | Scroll Sepolia | 534351 |
 | Linea Sepolia | 59141 |
 | Mantle Testnet | 5003 |
+| Monad Testnet | 10143 |
 | Abstract Testnet | 11124 |
 
 ## Contract Addresses
 
 All chains use deterministic CREATE2 deployment. Two address sets:
 
-**Mainnet contracts** (chains 1, 137, 8453, 42161, 10, 43114, 56, 100, etc.):
+**Mainnet contracts** (chains 1, 137, 8453, 42161, 10, 43114, 56, 100, 143, etc.):
 - Identity Registry: `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`
 - Reputation Registry: `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`
 
-**Testnet contracts** (chains 11155111, 84532, 421614, 11155420, 43113, etc.):
+**Testnet contracts** (chains 11155111, 84532, 421614, 11155420, 43113, 10143, etc.):
 - Identity Registry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
 - Reputation Registry: `0x8004B663056A597Dffe9eCcC1965A193B7388713`
 
@@ -84,3 +85,4 @@ All chains use deterministic CREATE2 deployment. Two address sets:
 - **Scroll (534352)**: `https://rpc.scroll.io`
 - **Celo (42220)**: `https://forno.celo.org`
 - **Linea (59144)**: `https://rpc.linea.build`
+- **Monad (143)**: use the network RPC from your infra provider or local deployment config

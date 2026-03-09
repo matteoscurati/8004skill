@@ -1,6 +1,6 @@
 # Troubleshooting
 
-> As of agent0-sdk v1.5.3, March 2026.
+> As of agent0-sdk v1.6.0, March 2026.
 
 Common errors and their solutions, organized by category.
 
@@ -95,7 +95,7 @@ Common errors and their solutions, organized by category.
 
 ### "Not agent owner"
 **Cause**: Connected wallet doesn't own the agent.
-**Fix**: Verify ownership with `load-agent.ts` (shows owner addresses). Connect the correct wallet via `wc-pair.ts`.
+**Fix**: Verify ownership with `ownership.ts --action get-owner` or `load-agent.ts`. Connect the correct wallet via `wc-pair.ts`.
 
 ### "Wallet already set to this address"
 **Cause**: Attempting to set a wallet that's already set.

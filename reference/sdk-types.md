@@ -1,6 +1,6 @@
 # SDK Types Reference
 
-> As of agent0-sdk v1.5.3, March 2026.
+> As of agent0-sdk v1.6.0, March 2026.
 
 ## AgentSummary
 
@@ -33,11 +33,17 @@ Returned by `sdk.giveFeedback()`, `sdk.getFeedback()`, `sdk.searchFeedback()`, `
 {
   id: [AgentId, Address, number], agentId: string, reviewer: Address, txHash?: string,
   value?: number, tags: string[], endpoint?: string, text?: string,
-  context?: Record<string, any>, proofOfPayment?: Record<string, any>, fileURI?: string,
+  proofOfPayment?: Record<string, any>, fileURI?: string,
   createdAt: number, answers: Array<Record<string, any>>, isRevoked: boolean,
-  capability?: string, name?: string, skill?: string, task?: string,
+  mcpTool?: string, mcpPrompt?: string, mcpResource?: string,
+  a2aSkills?: string[], a2aContextId?: string, a2aTaskId?: string,
+  oasfSkills?: string[], oasfDomains?: string[],
 }
 ```
+
+## FeedbackSearchFilters Compatibility
+
+`sdk.searchFeedback()` still accepts legacy filter buckets such as `capabilities`, `skills`, `tasks`, and `names` for backwards compatibility with indexed data and older clients. This does **not** change the feedback-file schema, which is spec-aligned in v1.6.0.
 
 ## TransactionHandle
 

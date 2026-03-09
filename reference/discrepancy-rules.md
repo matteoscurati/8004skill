@@ -1,6 +1,6 @@
 # Discrepancy Rules
 
-> As of agent0-sdk v1.5.3, March 2026.
+> As of agent0-sdk v1.6.0, March 2026.
 
 Known discrepancies between the ERC-8004 spec, the SDK implementation, and on-chain state. Use the **Recommended** action when handling each case.
 

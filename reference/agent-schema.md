@@ -1,8 +1,8 @@
 # ERC-8004 Data Structures
 
-> As of agent0-sdk v1.5.3, March 2026.
+> As of agent0-sdk v1.6.0, March 2026.
 
-## Agent Registration File (IPFS/HTTP metadata)
+## Agent Registration File (IPFS / HTTP / on-chain data URI)
 
 > The ERC-8004 spec uses `services` as the key for endpoints. The SDK accepts both `services` and `endpoints` when reading, and normalizes to `endpoints` internally.
 
@@ -21,13 +21,15 @@
 }
 ```
 
+`Agent.registerOnChain()` publishes the same logical registration JSON as a `data:application/json;base64,...` `agentURI`. `SDK.loadAgent()` in v1.6.0 can decode those ERC-8004 data URIs directly.
+
 ## Agent Summary / Feedback / Reputation Summary
 
 See `AgentSummary`, `Feedback`, and `getReputationSummary()` types in `sdk-types.md`.
 
 ## Feedback File (off-chain enrichment, uploaded to IPFS)
 
-Fields: `text`, `context`, `proofOfPayment`, `capability`, `name`, `skill`, `task`.
+Fields: `text`, `proofOfPayment`, `mcpTool`, `mcpPrompt`, `mcpResource`, `a2aSkills`, `a2aContextId`, `a2aTaskId`, `oasfSkills`, `oasfDomains`.
 
 ## On-Chain Metadata
 

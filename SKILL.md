@@ -1,9 +1,9 @@
 ---
 name: 8004skill
-description: Use when the user asks to register, search, update, or inspect on-chain agents, manage reputation feedback, agent wallets, or verify identity on EVM chains via ERC-8004.
+description: Use when the user asks to register, search, update, or inspect on-chain agents, manage reputation feedback, ownership, wallets, or verify identity on EVM chains via ERC-8004.
 metadata:
   author: matteoscurati
-  version: "1.4.0"
+  version: "2.0.0"
   npm:
     package: 8004skill
     postInstall: npm install --omit=dev
@@ -25,6 +25,8 @@ metadata:
 
 ERC-8004 defines three registries on EVM chains: **Identity** (ERC-721 NFTs with IPFS/HTTP metadata), **Reputation** (on-chain feedback), and **Validation** (third-party attestations). Agent ID format: `{chainId}:{tokenId}`.
 
+In the current public `agent0-sdk` package (`1.6.0`), Identity + Reputation flows are operational in the skill. Validation remains reference-only until the SDK exposes public request/response wrappers.
+
 ### Reference Map
 
 Read files on demand — one concept per file, lazy-loaded by area.
@@ -37,6 +39,7 @@ Read files on demand — one concept per file, lazy-loaded by area.
 | | `{baseDir}/reference/trust-boundaries.md` | Trust models, what to trust/verify/flag |
 | | `{baseDir}/reference/validation-registry.md` | Third-party attestations |
 | **SDK** | `{baseDir}/reference/sdk-api.md` | SDK class + Agent class methods |
+| | `{baseDir}/reference/sdk-coverage.md` | Verify method-to-flow coverage |
 | | `{baseDir}/reference/search-filters.md` | SearchFilters, FeedbackFilters, CLI flags |
 | | `{baseDir}/reference/sdk-types.md` | AgentSummary, Feedback, TransactionHandle, enums |
 | **Operations** | `{baseDir}/reference/security.md` | Before any write operation |
@@ -55,7 +58,7 @@ Read files on demand — one concept per file, lazy-loaded by area.
 Before entering the Operations Menu, classify the user's request:
 
 1. **Knowledge query** ("what is…", "how does…") → Read the relevant reference file, answer directly. No script needed.
-2. **Action request** (register, search, update, feedback) → Operations Menu below.
+2. **Action request** (register, search, update, feedback, ownership, diagnostics) → Operations Menu below.
 3. **Troubleshooting** (error, help, something broke) → `troubleshooting.md`.
 4. **Multi-step workflow** (complex goal, multiple operations) → `decision-tree.md`, then guide step by step.
 5. **Cross-platform** (Python, OpenAI, other SDK) → `python-recipes.md` or relevant cross-platform reference.
@@ -96,6 +99,9 @@ Chain selection is **mandatory** for every operation. Resolve before executing a
 | 8 | Verify Identity | Read/Write | Sign only |
 | 9 | Whoami | Read | No (Sign optional) |
 | 10 | Transfer Agent | Write | Yes |
+| 11 | Get Agent Summary | Read | No |
+| 12 | Ownership | Read | No |
+| 13 | SDK Diagnostics | Read | No |
 
 ### Common Patterns
 
@@ -165,7 +171,7 @@ For a comprehensive troubleshooting guide, see `{baseDir}/reference/troubleshoot
 
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md`.
 
-4. **Ask about IPFS provider** (optional): `pinata` (needs `PINATA_JWT`), `filecoinPin` (needs `FILECOIN_PRIVATE_KEY`), `node` (needs `IPFS_NODE_URL`), or none.
+4. **Ask about IPFS provider** (optional): `pinata` (needs `PINATA_JWT`), `filecoinPin` (needs `FILECOIN_PRIVATE_KEY`), `node` (needs `IPFS_NODE_URL`), `helia` (embedded, no credential), or none.
    Env vars can be set in shell or `~/.8004skill/.env` (see `.env.example`). Shell takes precedence. If not set, the credential is prompted inline per "IPFS Credential Resolution".
 
 5. **WalletConnect project ID** (optional). A default project ID is provided, but it is shared across all users and may be rate-limited. For production use, recommend setting a personal project ID via `WC_PROJECT_ID` env var or config (free at https://cloud.walletconnect.com).
@@ -192,25 +198,30 @@ For a comprehensive troubleshooting guide, see `{baseDir}/reference/troubleshoot
 > **Best practices**: Read [Registration.md](https://github.com/erc-8004/best-practices/blob/main/Registration.md) and [ERC8004SPEC.md](https://github.com/erc-8004/best-practices/blob/main/src/ERC8004SPEC.md). Four Golden Rules: (1) clear name, detailed description with capabilities/pricing; (2) at least one endpoint (MCP or A2A); (3) OASF skills/domains; (4) ERC-8004 registration details in metadata.
 
 ### Prerequisites
-Write prerequisites + IPFS provider configured (credential resolved per "IPFS Credential Resolution").
+Write prerequisites. IPFS credentials are only required when `--storage ipfs`.
 
 ### Input
 
-Ask step by step: **name** (required), **description** (required), **MCP endpoint** (optional), **A2A endpoint** (optional), **image URL** (optional), **active status** (default: true), **OASF skills** (comma-separated slugs, optional), **OASF domains** (optional), **x402 support** (default: false), **IPFS provider** (from config, or HTTP URI alternative).
+Ask step by step: **name** (required), **description** (required), **storage mode** (`ipfs`, `http`, or `onchain`), **MCP endpoint** (optional), **A2A endpoint** (optional), **image URL** (optional), **active status** (default: true), **OASF skills** (comma-separated slugs, optional), **OASF domains** (optional), **x402 support** (default: false), plus:
+
+- `ipfs`: IPFS provider (`pinata`, `filecoinPin`, `node`, `helia`)
+- `http`: HTTP or data URI to publish
+- `onchain`: no off-chain storage, uses ERC-8004 JSON `data:` URI
 
 > **OASF taxonomy**: Use [agntcy/oasf](https://github.com/agntcy/oasf) as slug source. Proactively suggest relevant skills/domains.
 
 ### Confirmation
-Show: Chain, Signer, Name, Description, endpoints, OASF, x402, IPFS provider, estimated gas (~150k). Ask: "Proceed?"
+Show: Chain, Signer, Name, Description, endpoints, OASF, x402, storage mode, URI/provider as applicable, estimated gas (~150k, higher for `onchain`). Ask: "Proceed?"
 
 ### Execution
 
 ```
 [PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/register.ts \
   --chain-id <chainId> --rpc-url <rpcUrl> --name "<name>" --description "<description>" \
-  --ipfs <provider> [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
+  --storage <ipfs|http|onchain> [--ipfs <provider>] [--http-uri <uri>] \
+  [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
   [--image <url>] [--skills "slug1,slug2"] [--domains "slug1,slug2"] \
-  [--validate-oasf true|false] [--x402 true] [--http-uri <uri>]
+  [--validate-oasf true|false] [--x402 true]
 ```
 
 ### Result
@@ -231,7 +242,7 @@ Show: agentId (`{chainId}:{tokenId}`), txHash (link to explorer), metadata URI. 
 npx tsx {baseDir}/scripts/load-agent.ts --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl>
 ```
 
-Input: **Agent ID** (`chainId:tokenId`). Show: name, agentId, description, active status, endpoints, MCP tools, A2A skills, wallet, owners. Offer Update Agent if user wants to edit.
+Input: **Agent ID** (`chainId:tokenId`). Show: name, agentId, description, active status, endpoints, MCP tools, A2A skills, wallet, owners, metadata, and the full `registrationFile`. Offer Update Agent if user wants to edit.
 
 ---
 
@@ -270,30 +281,43 @@ Always `AgentSummary[]`. Table: #, Agent ID, Name, MCP, A2A, Description. Offer 
 
 ### Input
 
-**Agent ID**, **rating** (-100 to 100, decimals allowed), **tags** (optional, up to 2), **text** (optional, needs IPFS — credential resolved per "IPFS Credential Resolution"), **endpoint** (optional).
+**Agent ID**, **rating** (-100 to 100, decimals allowed), **tags** (optional, up to 2), **endpoint** (optional), plus optional spec-aligned off-chain fields:
+
+- `text`
+- `mcp-tool`, `mcp-prompt`, `mcp-resource`
+- `a2a-skills`, `a2a-context-id`, `a2a-task-id`
+- `oasf-skills`, `oasf-domains`
+- `proof-of-payment-json`
+
+If any off-chain field is used, require `--ipfs <provider>` and resolve credentials per "IPFS Credential Resolution".
 
 ### Confirmation
-Show: Target Agent, Rating, Tags, Text, Signer, Chain. Ask: "Submit?"
+Show: Target Agent, Rating, Tags, Endpoint, off-chain feedback fields (if any), Signer, Chain. Ask: "Submit?"
 
 ### Execution
 
 ```
 [PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/feedback.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --value <value> \
-  [--tag1 <tag>] [--tag2 <tag>] [--text "<text>"] [--endpoint <url>] \
-  [--capability <cap>] [--tool-name <tool>] [--skill <skill>] [--task <task>] [--ipfs <provider>]
+  [--tag1 <tag>] [--tag2 <tag>] [--endpoint <url>] [--ipfs <provider>] \
+  [--text "<text>"] [--mcp-tool <tool>] [--mcp-prompt <prompt>] [--mcp-resource <resource>] \
+  [--a2a-skills "skill1,skill2"] [--a2a-context-id <id>] [--a2a-task-id <id>] \
+  [--oasf-skills "slug1,slug2"] [--oasf-domains "slug1,slug2"] \
+  [--proof-of-payment-json '{"key":"value"}']
 ```
 
 ### Result
 Show: txHash, reviewer address, rating, tags.
 
-### Revoke / Respond
+### Get / Revoke / Respond
+
+**Get**: `npx tsx {baseDir}/scripts/feedback.ts --action get --agent-id <agentId> --client-address <reviewer> --feedback-index <index> --chain-id <chainId> --rpc-url <rpcUrl>`
 
 **Revoke**: `npx tsx {baseDir}/scripts/feedback.ts --action revoke --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --feedback-index <index>`
 
 **Respond**: `npx tsx {baseDir}/scripts/respond-feedback.ts --agent-id <agentId> --client-address <reviewer> --feedback-index <index> --response-uri <uri> --response-hash <hash> --chain-id <chainId> --rpc-url <rpcUrl>`
 
-Both require confirmation. Revoke result: txHash. Respond result: txHash, agentId, feedbackIndex, responseUri.
+Revoke and respond require confirmation. Get is read-only. Revoke result: txHash. Respond result: txHash, agentId, feedbackIndex, responseUri.
 
 ### Error Handling
 - Value out of range: Must be -100 to 100.
@@ -400,16 +424,17 @@ Card: **Agent** (name + ID), **Status**, **Trust** (label), **Wallet**, **Owners
 
 **Triggered by**: "update agent", "edit agent", "change agent name", "add MCP endpoint".
 
-Write prerequisites + IPFS provider (credential resolved per "IPFS Credential Resolution"). Best practices same as Register (Operation 2).
+Write prerequisites. Choose republish storage mode exactly as in Register (`ipfs`, `http`, `onchain`). IPFS credentials are only needed for `ipfs`.
 
-Input: **Agent ID** + fields to change (name, description, endpoints, OASF, active, image, x402, trust, metadata). Show old → new. Ask to proceed.
+Input: **Agent ID** + fields to change (name, description, endpoints, OASF, active, image, x402, trust, metadata, storage mode). Show old → new. Ask to proceed.
 
 ```
 [PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/update-agent.ts \
-  --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --ipfs <provider> \
+  --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --storage <ipfs|http|onchain> [--ipfs <provider>] \
   [--name "<name>"] [--description "<desc>"] [--image <url>] \
   [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--ens-endpoint <name.eth>] [--active true|false] \
   [--remove-mcp] [--remove-a2a] [--remove-ens] \
+  [--remove-endpoint-type <mcp|a2a|ens|did|wallet|oasf>] [--remove-endpoint-value <value>] [--remove-all-endpoints true] \
   [--trust "reputation,crypto-economic,tee-attestation"] \
   [--skills "s1,s2"] [--domains "d1,d2"] [--remove-skills "s1"] [--remove-domains "d1"] \
   [--validate-oasf true|false] [--x402 true|false] \
@@ -444,3 +469,37 @@ Show: txHash, agentId, new owner.
 ### Error Handling
 - Not agent owner: Only the current owner can transfer.
 - Invalid address: Must be valid 0x address, not zero address.
+
+---
+
+## Operation 11: Get Agent Summary
+
+**Triggered by**: "get agent summary", "fetch indexed agent", "show indexed view".
+
+```
+npx tsx {baseDir}/scripts/get-agent.ts --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl>
+```
+
+Use this when the user wants the indexed `AgentSummary` view rather than the hydrated registration file from `load-agent.ts`.
+
+---
+
+## Operation 12: Ownership
+
+**Triggered by**: "who owns this agent", "is this address the owner", "check ownership".
+
+**Get owner**: `npx tsx {baseDir}/scripts/ownership.ts --action get-owner --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl>`
+
+**Check owner**: `npx tsx {baseDir}/scripts/ownership.ts --action is-owner --agent-id <agentId> --address <addr> --chain-id <chainId> --rpc-url <rpcUrl>`
+
+---
+
+## Operation 13: SDK Diagnostics
+
+**Triggered by**: "sdk info", "show registry addresses", "is this read only", "diagnose chain setup".
+
+```
+npx tsx {baseDir}/scripts/sdk-info.ts --chain-id <chainId> --rpc-url <rpcUrl> [--subgraph-chain-id <chainId>]
+```
+
+Show: effective chain ID, registry map, direct registry getters, read-only status, chain/IPFS/subgraph client availability, probed subgraph availability. Use this flow when chain config or package capabilities are unclear.

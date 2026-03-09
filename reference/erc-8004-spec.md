@@ -1,6 +1,6 @@
 # ERC-8004 Protocol Specification
 
-> As of agent0-sdk v1.5.3, March 2026. Based on the ERC-8004 standard for on-chain agent economy.
+> As of agent0-sdk v1.6.0, March 2026. Based on the ERC-8004 standard for on-chain agent economy.
 
 > This file describes the ERC-8004 protocol and contract interfaces. For SDK wrapper methods, see `sdk-api.md`. For data types, see `sdk-types.md`.
 
@@ -14,7 +14,7 @@ ERC-8004 defines a standard for registering, discovering, and evaluating AI agen
 
 The Identity Registry is an ERC-721 NFT contract. Each agent is a token with:
 - **Token ID**: Unique per chain, auto-incremented
-- **Agent URI**: Points to a registration file (IPFS or HTTP) containing the agent's metadata
+- **Agent URI**: Points to a registration file (IPFS, HTTP, or ERC-8004 JSON `data:` URI) containing the agent's metadata
 - **On-chain metadata**: Key-value pairs stored directly on-chain (e.g., `agentWallet`)
 
 The agent's full identity — name, description, endpoints, capabilities — lives in the registration file referenced by the URI. The NFT itself is the ownership proof.
@@ -33,7 +33,7 @@ Each feedback entry contains:
 - **Value**: Integer rating from -100 to 100 (with optional decimals encoded as `int128` + `uint8 valueDecimals`)
 - **Tags**: Up to 2 string tags (e.g., `starred`, `reachable`, `uptime`)
 - **Endpoint**: Optional — which endpoint was evaluated
-- **Feedback file URI**: Optional IPFS pointer to off-chain enrichment (text, context, proof of payment)
+- **Feedback file URI**: Optional IPFS pointer to off-chain enrichment (text, proof of payment, MCP/A2A/OASF fields)
 
 **Contract functions**: See [Contract Function Signatures](#contract-function-signatures) below for full ABI-level details.
 

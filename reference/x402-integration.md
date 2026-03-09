@@ -1,6 +1,6 @@
 # X402 Payment Integration
 
-> As of agent0-sdk v1.5.3, March 2026.
+> As of agent0-sdk v1.6.0, March 2026.
 
 ## What is X402?
 
