@@ -3,7 +3,7 @@ name: 8004skill
 description: Use when the user asks to register, search, update, or inspect on-chain agents, manage reputation feedback, ownership, wallets, or verify identity on EVM chains via ERC-8004.
 metadata:
   author: matteoscurati
-  version: "2.0.0"
+  version: "2.0.1"
   npm:
     package: 8004skill
     postInstall: npm install --omit=dev

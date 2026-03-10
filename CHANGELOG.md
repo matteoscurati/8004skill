@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2026-03-10
+
+### Changed
+- Version metadata aligned across package manifests, skill metadata, and script diagnostics
+- Website badge updated to reflect the published package version
+
+### Fixed
+- Documentation and website copy aligned with the current `agent0-sdk` v1.6.0 surface
+- Security guidance now consistently requires IPFS credentials to be configured outside chat/command lines
+- Chain reference docs corrected for current deployed network IDs and manual-config coverage
+
+## [2.0.0] - 2026-03-09
+
+### Added
+- On-chain registration support (`agent.registerOnChain()`) with ERC-8004 JSON data URIs
+- Helia IPFS backend (`--ipfs helia`) — embedded, no external credentials
+- `get-agent.ts` script — fetch indexed AgentSummary via `sdk.getAgent()`
+- `ownership.ts` script — get-owner and is-owner actions
+- `sdk-info.ts` script — chain diagnostics (registries, read-only status, client availability)
+- 3 new SKILL.md operations: Get Agent Summary (#11), Ownership (#12), SDK Diagnostics (#13)
+- 6 new unit tests (176 total)
+
+### Changed
+- Upgraded agent0-sdk from ^1.5.3 to 1.6.0
+- Feedback schema migrated to spec-aligned fields (mcpTool, mcpPrompt, mcpResource, a2aSkills, a2aContextId, a2aTaskId, oasfSkills, oasfDomains); legacy fields removed
+- IPFS provider enum: `pinata | filecoinPin | node | helia`
+- SKILL.md expanded from 10 to 13 operations
+- Register Agent supports 3 storage modes: IPFS, HTTP, on-chain
+
 ## [1.4.0] - 2025-07-15
 
 ### Added
