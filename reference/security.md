@@ -11,7 +11,7 @@
 
 ## OpenClaw-Specific Rules
 
-When inside OpenClaw (`~/.openclaw` or `OPENCLAW_SESSION`): IPFS secrets must use OpenClaw skill config `env` field — never typed in chat, never in command prefixes. Command strings and session logs persist permanently.
+When inside OpenClaw (`~/.openclaw` or `OPENCLAW_SESSION`): provide IPFS secrets via environment configuration (preferred) or `~/.8004skill/.env` — never typed in chat, never in command prefixes. Command strings and session logs persist permanently.
 
 ## General Rules
 
@@ -26,7 +26,7 @@ When inside OpenClaw (`~/.openclaw` or `OPENCLAW_SESSION`): IPFS secrets must us
 All signing uses WalletConnect v2 — the agent **never holds private keys**. Signing happens in the user's wallet app (MetaMask, Rainbow, etc.) with per-transaction approval.
 
 - Session file (`~/.8004skill/wc-storage.json`, chmod 600): contains relay metadata only, no key material. Sessions last ~7 days.
-- Config file (`~/.8004skill/config.json`): chain/RPC/WC project ID only, no secrets. `check-env.ts` validates ownership, permissions, HTTPS, and cloud-sync detection.
+- Config file (`~/.8004skill/config.json`): chain/RPC/IPFS provider/WC project ID plus registration metadata, but no secrets. `check-env.ts` validates ownership, permissions, HTTPS, and cloud-sync detection.
 - Session hijacking risk: attacker with file access could relay signing requests, but user still approves each in wallet app.
 - WC project ID is not a secret — identifies app to relay network.
 

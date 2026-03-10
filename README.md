@@ -122,7 +122,7 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 |-------|-------------|
 | `activeChain` | Chain ID for the active network |
 | `rpcUrl` | RPC endpoint for the active chain |
-| `ipfs` | IPFS pinning provider (`pinata`, `filecoinPin`, `node`, or `null`) |
+| `ipfs` | IPFS pinning provider (`pinata`, `filecoinPin`, `node`, `helia`, or `null`) |
 | `wcProjectId` | WalletConnect project ID (optional; a default is provided) |
 | `registrations` | Record of agents you have registered, keyed by chain ID |
 
@@ -135,7 +135,7 @@ The skill stores configuration at `~/.8004skill/config.json`, created automatica
 | `FILECOIN_PRIVATE_KEY` | `ipfs: "filecoinPin"` | Private key for Filecoin pinning |
 | `IPFS_NODE_URL` | `ipfs: "node"` | URL of the IPFS node API |
 
-> **Note:** The three IPFS variables are mutually exclusive — you only need the one that matches the provider you selected during configuration. IPFS is optional and only required for write operations that store metadata (agent registration, feedback with text). If a credential is not set when needed, the agent will prompt for it inline (not persisted).
+> **Note:** The three IPFS variables are mutually exclusive — you only need the one that matches the provider you selected during configuration. IPFS is optional and only required for write operations that store metadata (agent registration, feedback with text). If a required credential is missing, configure it in your shell environment, secret manager, or `~/.8004skill/.env` before retrying. Do not paste secrets into chat or command lines.
 
 Variables can be exported in the shell or defined in `~/.8004skill/.env` (shell values take precedence). Copy the included `.env.example` to get started:
 
@@ -158,7 +158,7 @@ The SDK supports 5 chains:
 | Base Mainnet | 8453 | Full (registry + subgraph) |
 | Base Sepolia | 84532 | Full (registry + subgraph) |
 
-Additional chains are deployed on-chain but not yet supported by the SDK. See [`reference/chains.md`](reference/chains.md) for the full list.
+Additional chains are deployed and usable with manual configuration (typically `SUBGRAPH_URL`, plus registry overrides only if needed). See [`reference/chains.md`](reference/chains.md) for the full list.
 
 ## Manual Installation
 

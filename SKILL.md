@@ -112,11 +112,10 @@ Chain selection is **mandatory** for every operation. Resolve before executing a
 When an operation needs IPFS and the config has a provider set (`ipfs` field):
 
 1. Check if the matching env var is set (`PINATA_JWT` / `FILECOIN_PRIVATE_KEY` / `IPFS_NODE_URL`).
-2. If missing, ask: "I need your {credential name} to upload metadata to IPFS. You can paste it here or set it in `~/.8004skill/.env` for future sessions."
-3. Pass it as an inline env var: `PINATA_JWT=<value> npx tsx ...`
-4. After success, show:
-
-> **Security reminder**: The credential was used for this operation only and was not saved. Consider rotating it if pasted directly. To avoid repeated prompts, set it in `~/.8004skill/.env` (chmod 600).
+2. If missing, stop before any wallet approval and tell the user to set it outside chat via shell env, secret manager, OpenClaw env config, or `~/.8004skill/.env` (chmod 600).
+3. Never ask the user to paste IPFS secrets in chat.
+4. Never include secrets in command arguments or inline env var prefixes.
+5. If the user accidentally pasted a secret, warn immediately that it is exposed in session history and should be rotated.
 
 **Pairing display** — when a script emits `{ "status": "pairing", "uri": "wc:..." }` on stderr, show the URI in a fenced code block. Tell user: "Scan the QR code or copy the URI and paste in your wallet app."
 
@@ -167,12 +166,12 @@ For a comprehensive troubleshooting guide, see `{baseDir}/reference/troubleshoot
    - Polygon Mainnet (137) — full SDK support
    - Base Mainnet (8453) — full SDK support
    - Base Sepolia (84532) — full SDK support, testing
-   - Additional 13+ mainnet chains (Arbitrum, Optimism, Avalanche, BSC, etc.) — deployed but require `SUBGRAPH_URL` override. See `{baseDir}/reference/chains.md` for the full list.
+   - Additional deployed mainnet and testnet chains — require `SUBGRAPH_URL` override for indexed discovery. See `{baseDir}/reference/chains.md` for the full list.
 
 3. **Ask for RPC URL**. Suggest public defaults from `{baseDir}/reference/chains.md`.
 
 4. **Ask about IPFS provider** (optional): `pinata` (needs `PINATA_JWT`), `filecoinPin` (needs `FILECOIN_PRIVATE_KEY`), `node` (needs `IPFS_NODE_URL`), `helia` (embedded, no credential), or none.
-   Env vars can be set in shell or `~/.8004skill/.env` (see `.env.example`). Shell takes precedence. If not set, the credential is prompted inline per "IPFS Credential Resolution".
+   Env vars can be set in shell or `~/.8004skill/.env` (see `.env.example`). Shell takes precedence. If the required credential is missing, stop and ask the user to configure it securely outside chat per "IPFS Credential Resolution".
 
 5. **WalletConnect project ID** (optional). A default project ID is provided, but it is shared across all users and may be rate-limited. For production use, recommend setting a personal project ID via `WC_PROJECT_ID` env var or config (free at https://cloud.walletconnect.com).
 
@@ -216,7 +215,7 @@ Show: Chain, Signer, Name, Description, endpoints, OASF, x402, storage mode, URI
 ### Execution
 
 ```
-[PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/register.ts \
+npx tsx {baseDir}/scripts/register.ts \
   --chain-id <chainId> --rpc-url <rpcUrl> --name "<name>" --description "<description>" \
   --storage <ipfs|http|onchain> [--ipfs <provider>] [--http-uri <uri>] \
   [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
@@ -289,7 +288,7 @@ Always `AgentSummary[]`. Table: #, Agent ID, Name, MCP, A2A, Description. Offer 
 - `oasf-skills`, `oasf-domains`
 - `proof-of-payment-json`
 
-If any off-chain field is used, require `--ipfs <provider>` and resolve credentials per "IPFS Credential Resolution".
+If any off-chain field is used, require `--ipfs <provider>` and ensure the matching env var is already configured per "IPFS Credential Resolution".
 
 ### Confirmation
 Show: Target Agent, Rating, Tags, Endpoint, off-chain feedback fields (if any), Signer, Chain. Ask: "Submit?"
@@ -297,7 +296,7 @@ Show: Target Agent, Rating, Tags, Endpoint, off-chain feedback fields (if any), 
 ### Execution
 
 ```
-[PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/feedback.ts \
+npx tsx {baseDir}/scripts/feedback.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --value <value> \
   [--tag1 <tag>] [--tag2 <tag>] [--endpoint <url>] [--ipfs <provider>] \
   [--text "<text>"] [--mcp-tool <tool>] [--mcp-prompt <prompt>] [--mcp-resource <resource>] \
@@ -429,7 +428,7 @@ Write prerequisites. Choose republish storage mode exactly as in Register (`ipfs
 Input: **Agent ID** + fields to change (name, description, endpoints, OASF, active, image, x402, trust, metadata, storage mode). Show old → new. Ask to proceed.
 
 ```
-[PINATA_JWT=<jwt>|FILECOIN_PRIVATE_KEY=<key>|IPFS_NODE_URL=<url>] npx tsx {baseDir}/scripts/update-agent.ts \
+npx tsx {baseDir}/scripts/update-agent.ts \
   --agent-id <agentId> --chain-id <chainId> --rpc-url <rpcUrl> --storage <ipfs|http|onchain> [--ipfs <provider>] \
   [--name "<name>"] [--description "<desc>"] [--image <url>] \
   [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--ens-endpoint <name.eth>] [--active true|false] \

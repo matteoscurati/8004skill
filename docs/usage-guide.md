@@ -12,13 +12,19 @@
 
 ## Installation
 
-The recommended way to install 8004skill is via npx:
+For the widest agent compatibility, the recommended install path is via Skills CLI:
+
+```bash
+npx skills add matteoscurati/8004skill -g
+```
+
+For the built-in installer flow specific to 8004skill, use npx:
 
 ```bash
 npx 8004skill install
 ```
 
-This downloads the skill, installs production dependencies, and creates symlinks for the agent(s) of your choice (Claude Code and/or OpenClaw). It works from anywhere — no git clone required.
+The built-in installer downloads the skill, installs production dependencies, and creates symlinks for the agent(s) of your choice (Claude Code and/or OpenClaw). It works from anywhere — no git clone required.
 
 **From source (git clone):**
 
@@ -74,6 +80,7 @@ chmod 600 ~/.8004skill/.env
 ```
 
 Write operations use WalletConnect v2 — no private keys in the environment. The agent will pair your wallet via QR code during configuration.
+If an IPFS-backed write requires `PINATA_JWT`, `FILECOIN_PRIVATE_KEY`, or `IPFS_NODE_URL`, set it in your shell or `~/.8004skill/.env` before retrying. Never paste secrets into chat.
 
 ### Session workflow
 
@@ -141,6 +148,7 @@ chmod 600 ~/.8004skill/.env
 ```
 
 Write operations use WalletConnect v2 — no private keys needed. The agent will pair your wallet during configuration.
+Inside OpenClaw, provide secrets via environment configuration or `~/.8004skill/.env` rather than chat.
 
 ---
 

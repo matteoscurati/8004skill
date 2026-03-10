@@ -28,15 +28,22 @@ The public SDK defaults currently include Identity + Reputation addresses only. 
 | Optimism | 10 |
 | Avalanche C-Chain | 43114 |
 | BSC (BNB Chain) | 56 |
-| Gnosis | 100 |
+| Monad | 143 |
 | Scroll | 534352 |
+| Gnosis | 100 |
 | Celo | 42220 |
 | Taiko | 167000 |
 | Linea | 59144 |
-| Mantle | 5000 |
-| Monad | 143 |
-| MegaETH | 40 |
+| MegaETH | 4326 |
+| XLayer | 196 |
 | Abstract | 2741 |
+| Mantle | 5000 |
+| Soneium | 1868 |
+| GOAT Network | 2345 |
+| Metis | 1088 |
+| Hedera | 295 |
+| SKALE Base | 1187947933 |
+| Shape | 360 |
 
 ### Testnets
 
@@ -44,24 +51,36 @@ The public SDK defaults currently include Identity + Reputation addresses only. 
 |-------|----------|
 | Arbitrum Sepolia | 421614 |
 | Optimism Sepolia | 11155420 |
+| Polygon Amoy | 80002 |
 | Avalanche Fuji | 43113 |
 | BSC Testnet | 97 |
-| Celo Alfajores | 44787 |
-| Scroll Sepolia | 534351 |
-| Linea Sepolia | 59141 |
-| Mantle Testnet | 5003 |
 | Monad Testnet | 10143 |
-| Abstract Testnet | 11124 |
+| Scroll Sepolia | 534351 |
+| Gnosis Chiado | 10200 |
+| Celo Sepolia | 11142220 |
+| Taiko Hoodi | 167013 |
+| MegaETH Testnet | 6343 |
+| Linea Sepolia | 59141 |
+| XLayer Testnet | 1952 |
+| Abstract Sepolia | 11124 |
+| Mantle Sepolia | 5003 |
+| Soneium Minato | 1946 |
+| GOAT Testnet3 | 48816 |
+| Metis Sepolia | 59902 |
+| Hedera Testnet | 296 |
+| SKALE Base Sepolia | 324705682 |
+| Arc Testnet | 5042002 |
+| Shape Sepolia | 11011 |
 
 ## Contract Addresses
 
 All chains use deterministic CREATE2 deployment. Two address sets:
 
-**Mainnet contracts** (chains 1, 137, 8453, 42161, 10, 43114, 56, 100, 143, etc.):
+**Mainnet contracts** (chains 1, 137, 8453, 42161, 10, 43114, 56, 143, 534352, 100, 42220, 167000, 59144, 4326, 196, 2741, 5000, 1868, 2345, 1088, 295, 1187947933, 360, etc.):
 - Identity Registry: `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`
 - Reputation Registry: `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`
 
-**Testnet contracts** (chains 11155111, 84532, 421614, 11155420, 43113, 10143, etc.):
+**Testnet contracts** (chains 11155111, 84532, 421614, 11155420, 80002, 43113, 97, 10143, 534351, 10200, 11142220, 167013, 6343, 59141, 1952, 11124, 5003, 1946, 48816, 59902, 296, 324705682, 5042002, 11011, etc.):
 - Identity Registry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
 - Reputation Registry: `0x8004B663056A597Dffe9eCcC1965A193B7388713`
 
@@ -86,3 +105,8 @@ All chains use deterministic CREATE2 deployment. Two address sets:
 - **Celo (42220)**: `https://forno.celo.org`
 - **Linea (59144)**: `https://rpc.linea.build`
 - **Monad (143)**: use the network RPC from your infra provider or local deployment config
+- **MegaETH (4326)**: use the network RPC from your infra provider or local deployment config
+- **Mantle (5000)**: `https://rpc.mantle.xyz`
+- **Metis (1088)**: `https://andromeda.metis.io/?owner=1088`
+
+For the remaining deployed networks (XLayer, Soneium, GOAT Network, Hedera, SKALE Base, Shape, and related testnets), use the RPC endpoint from your infra provider or the chain's official docs.

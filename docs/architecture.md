@@ -43,7 +43,7 @@ Key properties:
 ```
 +------------------+     1. reads      +------------------+
 |    AI Agent      | <-----------------+    SKILL.md      |
-|  (LLM runtime)  |                    | (9 ops + Update) |
+|  (LLM runtime)  |                    | (13 ops + sub-flows) |
 +--------+---------+                   +------------------+
          |
          | 2. presents menus, gathers inputs conversationally
@@ -111,14 +111,18 @@ scripts/
   check-env.ts       # Environment preflight (WC session status, env vars)
   register.ts        # Register new agent on-chain
   load-agent.ts      # Load agent details
+  get-agent.ts       # Fetch indexed AgentSummary from subgraph
   update-agent.ts    # Update agent metadata
   search.ts          # Semantic + subgraph search
   feedback.ts        # Submit/revoke feedback on-chain
   respond-feedback.ts # Respond to feedback on-chain
   reputation.ts      # Reputation summary + feedback list
   connect.ts         # Agent discovery and inspection
+  ownership.ts       # Ownership checks
+  sdk-info.ts        # SDK diagnostics
   wallet.ts          # EIP-712 wallet management
   verify.ts          # EIP-191 identity signing and verification
+  x402-status.ts     # X402 readiness checks
   wc-pair.ts         # WalletConnect pairing / session status
   wc-disconnect.ts   # WalletConnect session disconnect
   transfer.ts        # Transfer agent ownership
@@ -145,7 +149,7 @@ Every script imports from `shared.ts`. It provides:
 | `validateAgentId(id)` | Validates `chainId:tokenId` format via regex `/^\d+:\d+$/`. |
 | `validateAddress(addr, name)` | Validates `0x`-prefixed 40-hex-char Ethereum address. |
 | `validateSignature(sig)` | Validates `0x`-prefixed hex signature format. |
-| `validateIpfsProvider(raw)` | Validates against allowed set: `pinata`, `filecoinPin`, `node`. |
+| `validateIpfsProvider(raw)` | Validates against allowed set: `pinata`, `filecoinPin`, `node`, `helia`. |
 | `parseDecimalInRange(raw, name, min, max)` | Parses and validates a decimal number within a range. |
 | `splitCsv(raw)` | Splits a comma-separated string into a trimmed array. |
 | `sanitizeString(raw, maxLength)` | Strips control characters and truncates. Returns `{ value, truncated }`. Used by `buildAgentDetails` on untrusted on-chain data. |
@@ -220,11 +224,15 @@ Write operations add:
                   +---------------------------+
                   | check-env.ts              |  Environment status
                   | load-agent.ts             |  Agent details
+                  | get-agent.ts              |  Indexed AgentSummary view
                   | search.ts                 |  Semantic + subgraph search
                   | reputation.ts             |  Reputation + feedback list
                   | connect.ts                |  Agent discovery / inspection
+                  | ownership.ts              |  Ownership checks
+                  | sdk-info.ts               |  SDK diagnostics
                   | wallet.ts --action get    |  Read wallet address
                   | verify.ts --action verify |  Verify identity signature
+                  | x402-status.ts            |  X402 readiness summary
                   +---------------------------+
 
                   +---------------------------+
@@ -262,10 +270,14 @@ loadWalletProvider() -> createSdk({ walletProvider }) -> build tx -> submit ->
 
 - **transfer.ts** -- Transfers agent ownership to a new address. Requires WalletConnect session. Uses the ERC-721 `transferFrom` call.
 - **check-env.ts** -- Only script that does not use `agent0-sdk` SDK class. Reports WalletConnect session status, connected address, configured env vars, and security warnings (`.env` permissions, config file permissions, cloud-sync detection).
+- **get-agent.ts** -- Uses `sdk.getAgent()` to return the indexed `AgentSummary` view without loading the full registration file from chain/IPFS.
+- **ownership.ts** -- Read-only ownership helper around `sdk.getAgentOwner()` and `sdk.isAgentOwner()`.
 - **search.ts** -- Unified search via `sdk.searchAgents()`. Semantic search is triggered by `--keyword` (SDK calls `semantic-search.ag0.xyz` internally, then enriches results from subgraph). All filters (`--mcp-only`, `--active`, etc.) work with both semantic and structured search. Output is always `AgentSummary[]`.
+- **sdk-info.ts** -- Reports SDK chain context, registry addresses, read-only/write status, and IPFS/subgraph availability for the configured chain.
 - **wallet.ts** -- Tri-modal (`--action get|set|unset`). The `set` action signs via WalletConnect, or accepts a `--signature` flag with a pre-generated EIP-712 signature.
 - **update-agent.ts** -- Loads existing agent, applies mutations, re-publishes. Validates at least one mutation flag is present.
 - **connect.ts** -- Combines agent details + reputation summary in a single response. Used for the "Inspect Agent" operation.
+- **x402-status.ts** -- Evaluates whether an agent is x402-ready by checking active flag, wallet, endpoints, and reputation context.
 
 ---
 
@@ -515,13 +527,13 @@ Setting an agent wallet requires a typed signature from the target wallet:
 | Base Mainnet | 8453 | Full (registry + subgraph) |
 | Base Sepolia | 84532 | Full (registry + subgraph) |
 
-Additional chains (8 mainnets, 11 testnets) have contracts deployed but are not yet supported by the SDK. See [`reference/chains.md`](../reference/chains.md) for the full list, contract addresses, subgraph URLs, and RPC endpoints.
+Additional chains are deployed and can be used with manual configuration (typically `SUBGRAPH_URL`, plus registry overrides only if needed). See [`reference/chains.md`](../reference/chains.md) for the full list, contract addresses, and notes.
 
 ---
 
 ## Reference Documentation
 
-The `reference/` directory contains four files used by the agent at runtime to answer questions and configure scripts.
+The `reference/` directory contains multiple focused files used by the agent at runtime to answer questions and configure scripts. The most frequently used are:
 
 ### `reference/chains.md`
 

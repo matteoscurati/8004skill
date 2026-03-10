@@ -18,7 +18,7 @@ ERC-8004 defines three on-chain registries for AI agents on EVM chains:
 
 Agents are identified by `{chainId}:{tokenId}`. Contracts are deployed at deterministic addresses across 18+ chains via CREATE2.
 
-The protocol is live on 5 fully-indexed chains (Ethereum, Sepolia, Polygon, Base, Base Sepolia) with contracts deployed on 13+ additional mainnets. See `chains.md` for the full list.
+The protocol is live on 5 fully-indexed chains (Ethereum, Sepolia, Polygon, Base, Base Sepolia) with additional deployed mainnets and testnets available via manual config. See `chains.md` for the full list.
 ```
 
 
@@ -108,7 +108,7 @@ Structure: Tiered list (full -> deployed -> note)
 - Base Sepolia (84532) -- testing
 
 **Deployed Chains** (contracts deployed, requires `SUBGRAPH_URL` config):
-Arbitrum (42161), Optimism (10), Avalanche (43114), BSC (56), Gnosis (100), Scroll (534352), Celo (42220), Taiko (167000), Linea (59144), Mantle (5000), Monad (10143), MegaETH (40), Abstract (2741)
+Arbitrum (42161), Optimism (10), Avalanche (43114), BSC (56), Monad (143), Scroll (534352), Gnosis (100), Celo (42220), Taiko (167000), Linea (59144), MegaETH (4326), Abstract (2741), Mantle (5000)
 
 Plus corresponding testnets. See `chains.md` for RPCs and full details.
 ```
