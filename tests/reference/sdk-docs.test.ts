@@ -28,9 +28,9 @@ describe('sdk documentation alignment', () => {
   it('documents the new operational flows in the skill body', () => {
     const skill = read('SKILL.md');
 
-    expect(skill).toContain('scripts/get-agent.ts');
-    expect(skill).toContain('scripts/ownership.ts');
-    expect(skill).toContain('scripts/sdk-info.ts');
+    expect(skill).toContain('get-agent.ts');
+    expect(skill).toContain('ownership.ts');
+    expect(skill).toContain('sdk-info.ts');
     expect(skill).toContain('--storage <ipfs|http|onchain>');
     expect(skill).toContain('--action get');
   });

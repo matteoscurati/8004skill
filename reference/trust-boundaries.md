@@ -18,7 +18,7 @@ Most agents currently declare only `reputation`. The other models are available 
 
 ## Trust Label Derivation
 
-Trust labels are derived from reputation `count` and `averageValue`. See SKILL.md (Trust Labels section) for the full derivation rules and display format.
+See the "Trust Labels" table in `SKILL.md` for the full derivation rules (emoji, label, condition thresholds) and output format.
 
 ## Data Trust Boundaries
 

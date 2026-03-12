@@ -1,8 +1,6 @@
 # ERC-8004 Protocol Specification
 
-> As of agent0-sdk v1.6.0, March 2026. Based on the ERC-8004 standard for on-chain agent economy.
-
-> This file describes the ERC-8004 protocol and contract interfaces. For SDK wrapper methods, see `sdk-api.md`. For data types, see `sdk-types.md`.
+> As of agent0-sdk v1.6.0, March 2026. For contract ABI and events, see `erc-8004-contracts.md`. For SDK wrapper methods, see `sdk-api.md`. For data types, see `sdk-types.md`.
 
 ## Overview
 
@@ -12,235 +10,94 @@ ERC-8004 defines a standard for registering, discovering, and evaluating AI agen
 
 ### 1. Identity Registry (ERC-721)
 
-The Identity Registry is an ERC-721 NFT contract. Each agent is a token with:
-- **Token ID**: Unique per chain, auto-incremented
-- **Agent URI**: Points to a registration file (IPFS, HTTP, or ERC-8004 JSON `data:` URI) containing the agent's metadata
-- **On-chain metadata**: Key-value pairs stored directly on-chain (e.g., `agentWallet`)
+Each agent is an NFT with: **Token ID** (auto-incremented), **Agent URI** (IPFS/HTTP/data: URI pointing to registration file), **On-chain metadata** (key-value pairs, e.g. `agentWallet`).
 
-The agent's full identity — name, description, endpoints, capabilities — lives in the registration file referenced by the URI. The NFT itself is the ownership proof.
-
-**Contract functions**: See [Contract Function Signatures](#contract-function-signatures) below for full ABI-level details.
-
-**Ownership model**: Standard ERC-721 (transferable). Owner can update URI, metadata, and wallet. Operators can be granted permission via `setApprovalForAll` or `approve`. On transfer, `agentWallet` is automatically cleared.
+The agent's full identity (name, description, endpoints, capabilities) lives in the registration file. The NFT is ownership proof. Standard ERC-721 (transferable). Owner can update URI, metadata, wallet. On transfer, `agentWallet` is automatically cleared.
 
 ### 2. Reputation Registry
 
-The Reputation Registry stores on-chain feedback for agents. Any address can submit feedback for any agent.
+On-chain feedback for agents. Any address can submit feedback containing: Agent ID, Reviewer address, Value (-100 to 100, int128 + uint8 decimals), Tags (up to 2), Endpoint (optional), Feedback file URI (optional IPFS pointer to off-chain enrichment).
 
-Each feedback entry contains:
-- **Agent ID**: Target agent (chain-scoped token ID)
-- **Reviewer**: Address that submitted the feedback
-- **Value**: Integer rating from -100 to 100 (with optional decimals encoded as `int128` + `uint8 valueDecimals`)
-- **Tags**: Up to 2 string tags (e.g., `starred`, `reachable`, `uptime`)
-- **Endpoint**: Optional — which endpoint was evaluated
-- **Feedback file URI**: Optional IPFS pointer to off-chain enrichment (text, proof of payment, MCP/A2A/OASF fields)
-
-**Contract functions**: See [Contract Function Signatures](#contract-function-signatures) below for full ABI-level details.
-
-**Security**: Self-feedback is blocked — the contract reverts if `msg.sender` is the agent's owner or an approved operator.
-
-**Immutability**: Feedback values and tags cannot be edited after submission. They can only be revoked (marked as revoked, not deleted).
+Self-feedback is blocked (contract reverts if sender is owner/operator). Feedback values/tags are immutable after submission — can only be revoked (marked, not deleted).
 
 ### 3. Validation Registry
 
-The Validation Registry stores third-party attestations about agents. Validators (trusted third parties) can attest to agent properties.
-
-This registry is less commonly used directly — most agent interactions rely on Identity + Reputation. It enables trust models beyond simple reputation (e.g., TEE attestations, crypto-economic staking).
+Third-party attestations from designated validators. Less commonly used directly — most interactions rely on Identity + Reputation. Enables trust models beyond reputation (TEE attestations, crypto-economic staking). See `validation-registry.md`.
 
 ## Agent Identity
 
 ### Agent ID Format
 
-- **Global format**: `eip155:{chainId}:{identityRegistryAddress}:{tokenId}`
-- **Short format**: `{chainId}:{tokenId}` (used by 8004skill and most tools)
-
-The short format works because all chains use the same deterministic contract addresses.
+- **Global**: `eip155:{chainId}:{identityRegistryAddress}:{tokenId}`
+- **Short**: `{chainId}:{tokenId}` (used by 8004skill and most tools — works because all chains use same deterministic addresses)
 
 ### Registration File
 
-The registration file (stored on IPFS or HTTP) contains the agent's full profile: name, description, image, endpoints, trust models, status, owners, operators, and metadata. See `agent-schema.md` for the full JSON schema.
+Stored on IPFS or HTTP. Contains: name, description, image, endpoints, trust models, status, owners, operators, metadata. See `agent-schema.md` for JSON schema.
 
 ### Endpoint Types
 
 | Type | Purpose | Value |
 |------|---------|-------|
-| MCP | Model Context Protocol server | URL to MCP endpoint |
-| A2A | Agent-to-Agent protocol | URL to agent card (`.well-known/agent.json`) |
-| ENS | Ethereum Name Service | ENS domain name |
+| MCP | Model Context Protocol server | URL |
+| A2A | Agent-to-Agent protocol | URL to agent card |
+| ENS | Ethereum Name Service | Domain name |
 | DID | Decentralized Identifier | DID string |
 | WALLET | On-chain wallet | Ethereum address |
-| OASF | Open Agent Skill Framework | Skills and domains slugs |
+| OASF | Open Agent Skill Framework | Skills/domains slugs |
 
 ### Trust Models
 
-Agents declare which trust mechanisms they support: `reputation`, `crypto-economic`, `tee-attestation`. See `trust-boundaries.md` for detailed analysis of each model.
+Agents declare: `reputation`, `crypto-economic`, `tee-attestation`. See `trust-boundaries.md`.
 
 ## Deterministic Deployment
 
-All ERC-8004 contracts are deployed using CREATE2 with deterministic addresses. This means:
-- Every chain has the **same contract addresses** for the same contract type (mainnet vs testnet)
-- No address lookup needed — the addresses are hardcoded in the SDK
-- New chains can be supported by deploying to the known addresses
-
-See `chains.md` for the current mainnet and testnet contract addresses.
-
-### How CREATE2 Works
-
-CREATE2 computes the deployment address from `hash(0xFF, deployer, salt, initCodeHash)`. Since ERC-8004 uses the same deployer, salt, and contract bytecode on every chain, the resulting addresses are identical. This means:
-
-- Agents can be discovered on any chain without address lookups
-- Cross-chain tooling works with hardcoded addresses
-- New chain deployments automatically get the expected addresses
-
-## Contract Function Signatures
-
-### Identity Registry
-
-```solidity
-// Write
-function register() external returns (uint256 agentId)
-function register(string memory agentURI) external returns (uint256 agentId)
-function register(string memory agentURI, MetadataEntry[] memory metadata) external returns (uint256 agentId)
-function setAgentURI(uint256 agentId, string calldata newURI) external
-function setMetadata(uint256 agentId, string memory key, bytes memory value) external
-function setAgentWallet(uint256 agentId, address newWallet, uint256 deadline, bytes calldata signature) external
-function unsetAgentWallet(uint256 agentId) external
-
-// Read
-function getMetadata(uint256 agentId, string memory key) external view returns (bytes memory)
-function getAgentWallet(uint256 agentId) external view returns (address)
-function isAuthorizedOrOwner(address spender, uint256 agentId) external view returns (bool)
-function ownerOf(uint256 tokenId) external view returns (address)  // ERC-721
-function tokenURI(uint256 tokenId) external view returns (string memory)  // ERC-721
-```
-
-### Reputation Registry
-
-```solidity
-// Write
-function giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals,
-    string calldata tag1, string calldata tag2, string calldata endpoint,
-    string calldata feedbackURI, bytes32 feedbackHash) external
-function revokeFeedback(uint256 agentId, uint64 feedbackIndex) external
-function appendResponse(uint256 agentId, address clientAddress, uint64 feedbackIndex,
-    string calldata responseURI, bytes32 responseHash) external
-
-// Read
-function readFeedback(uint256 agentId, address clientAddress, uint64 feedbackIndex) external view
-    returns (int128 value, uint8 valueDecimals, string memory tag1, string memory tag2, bool isRevoked)
-function readAllFeedback(uint256 agentId, address[] calldata clientAddresses,
-    string calldata tag1, string calldata tag2, bool includeRevoked) external view returns (...)
-function getSummary(uint256 agentId, address[] calldata clientAddresses,
-    string calldata tag1, string calldata tag2) external view
-    returns (uint64 count, int128 summaryValue, uint8 summaryValueDecimals)
-function getLastIndex(uint256 agentId, address clientAddress) external view returns (uint64)
-function getClients(uint256 agentId) external view returns (address[] memory)
-function getResponseCount(uint256 agentId, address clientAddress, uint64 feedbackIndex,
-    address[] calldata responders) external view returns (uint64 count)
-```
-
-### Validation Registry
-
-See `validation-registry.md` for detailed purpose, data model, and use cases.
-
-```solidity
-// Write
-function validationRequest(address validatorAddress, uint256 agentId,
-    string calldata requestURI, bytes32 requestHash) external
-function validationResponse(bytes32 requestHash, uint8 response,
-    string calldata responseURI, bytes32 responseHash, string calldata tag) external
-
-// Read
-function getValidationStatus(bytes32 requestHash) external view
-    returns (address validatorAddress, uint256 agentId, uint8 response,
-    bytes32 responseHash, string memory tag, uint256 lastUpdate)
-function getSummary(uint256 agentId, address[] calldata validatorAddresses,
-    string calldata tag) external view returns (uint64 count, uint8 avgResponse)
-function getAgentValidations(uint256 agentId) external view returns (bytes32[] memory)
-function getValidatorRequests(address validatorAddress) external view returns (bytes32[] memory)
-```
-
-## Event Signatures
-
-```solidity
-// Identity Registry
-event Registered(uint256 indexed agentId, string agentURI, address indexed owner)
-event URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy)
-event MetadataSet(uint256 indexed agentId, string indexed indexedMetadataKey,
-    string metadataKey, bytes metadataValue)
-
-// Reputation Registry
-event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex,
-    int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2,
-    string endpoint, string feedbackURI, bytes32 feedbackHash)
-event FeedbackRevoked(uint256 indexed agentId, address indexed clientAddress,
-    uint64 indexed feedbackIndex)
-event ResponseAppended(uint256 indexed agentId, address indexed clientAddress,
-    uint64 feedbackIndex, address indexed responder, string responseURI, bytes32 responseHash)
-
-// Validation Registry
-event ValidationRequest(address indexed validatorAddress, uint256 indexed agentId,
-    string requestURI, bytes32 indexed requestHash)
-event ValidationResponse(address indexed validatorAddress, uint256 indexed agentId,
-    bytes32 indexed requestHash, uint8 response, string responseURI,
-    bytes32 responseHash, string tag)
-```
+All contracts deployed via CREATE2 with `hash(0xFF, deployer, salt, initCodeHash)`. Same deployer + salt + bytecode = identical addresses on every chain. No address lookup needed — hardcoded in SDK. See `chains.md` for addresses.
 
 ## Agent Lifecycle
 
-1. **Register**: Owner mints an agent NFT with a registration file (Identity Registry)
-2. **Configure**: Owner sets endpoints, capabilities, OASF skills, wallet, trust models
-3. **Discover**: Other agents search via subgraph queries or semantic search
-4. **Interact**: Agents connect via MCP/A2A endpoints
-5. **Rate**: After interaction, agents submit on-chain feedback (Reputation Registry)
-6. **Update**: Owner updates metadata, endpoints, or status as needed
-7. **Transfer**: Owner can transfer the agent NFT to a new address (irreversible)
+1. **Register**: Mint agent NFT with registration file
+2. **Configure**: Set endpoints, capabilities, OASF, wallet, trust models
+3. **Discover**: Search via subgraph or semantic search
+4. **Interact**: Connect via MCP/A2A endpoints
+5. **Rate**: Submit on-chain feedback
+6. **Update**: Modify metadata, endpoints, status
+7. **Transfer**: Transfer NFT to new address (irreversible)
 
 ## Subgraph Indexing
 
-The protocol uses The Graph subgraphs to index on-chain events for efficient querying. Not all chains have subgraph indexing — see `reference/chains.md` for the current status.
-
-**Important**: Subgraph indexing has eventual consistency. After an on-chain write, it may take seconds to minutes before the data appears in search results. The on-chain state is always authoritative.
+Protocol uses The Graph for efficient querying. Not all chains have indexing — see `chains.md`. Subgraph has eventual consistency (seconds to minutes lag after writes). On-chain state is always authoritative.
 
 ## Glossary
 
-Key terms used in ERC-8004 and 8004skill.
-
 | Term | Definition |
 |---|---|
-| A2A | Agent-to-Agent protocol. Enables direct agent communication via agent cards at `.well-known/agent.json`. |
-| Agent Card | JSON document describing an A2A agent's capabilities and skills. Hosted at the A2A endpoint URL. |
-| Agent ID | Unique identifier in format `{chainId}:{tokenId}`. Full format: `eip155:{chainId}:{registryAddress}:{tokenId}`. |
-| Agent URI | Pointer to an agent's registration file. Can be IPFS (`ipfs://...`), HTTP(S), or an ERC-8004 JSON `data:` URI. |
-| Agent Wallet | Ethereum address linked to an agent via EIP-712 signature. Used for payments and identity verification. |
-| CREATE2 | EVM opcode for deterministic contract deployment. All ERC-8004 contracts share the same address across chains. |
-| DID | Decentralized Identifier. Optional endpoint type for agents. |
-| EIP-712 | Ethereum typed structured data signing standard. Used for wallet binding signatures. |
-| ENS | Ethereum Name Service. Optional human-readable endpoint for agents. |
-| ERC-721 | Non-fungible token standard. Agent identities are ERC-721 NFTs. |
-| ERC-8004 | Standard defining three on-chain registries (Identity, Reputation, Validation) for AI agent economy. |
-| Feedback | On-chain rating (-100 to 100) with optional tags, text, and endpoint. Stored in Reputation Registry. |
-| Feedback File | Off-chain IPFS document enriching feedback with text, proof of payment, and spec-aligned MCP/A2A/OASF fields. |
-| Identity Registry | ERC-721 contract storing agent NFTs and their metadata URIs. |
-| IPFS | InterPlanetary File System. Decentralized storage for registration files and feedback files. |
-| MCP | Model Context Protocol. Primary endpoint type for AI agent tool access. |
-| Metadata | On-chain key-value pairs on Identity Registry. Separate from registration file data. |
-| OASF | Open Agent Skill Framework. Taxonomy of skills and domains from agntcy/oasf. |
-| Operator | Address granted permissions on an agent by the owner. Can perform updates but not transfers. |
-| Owner | Address holding the agent's ERC-721 NFT. Can update, transfer, and manage the agent. |
-| Registration File | JSON document (IPFS, HTTP, or on-chain `data:` URI) containing agent profile, endpoints, trust models, and metadata. |
-| Reputation Registry | Contract storing on-chain feedback entries for agents. |
-| Reputation Summary | Aggregated stats: count (number of reviews) and averageValue (-100 to 100). |
-| Subgraph | The Graph indexer for on-chain events. Provides efficient search queries. Has eventual consistency. |
-| Trust Label | Derived label (Untrusted/Caution/Highly Trusted/Trusted/Established/Emerging/No Data) based on reputation count and averageValue. |
-| Trust Model | Security mechanism declared by agents: `reputation`, `crypto-economic`, or `tee-attestation`. |
-| Validation Registry | Third registry for validator attestations. Limited SDK support as of v1.6.0. |
-| WalletConnect | Protocol v2 for remote signing. 8004skill uses it so the agent never holds private keys. |
-| X402 | HTTP 402-based payment protocol. Enables pay-per-request access to agent endpoints via USDC on Base. |
+| A2A | Agent-to-Agent protocol via agent cards at `.well-known/agent.json` |
+| Agent Card | JSON describing A2A agent capabilities/skills |
+| Agent ID | `{chainId}:{tokenId}`. Full: `eip155:{chainId}:{registryAddress}:{tokenId}` |
+| Agent URI | Pointer to registration file (IPFS, HTTP, or `data:` URI) |
+| Agent Wallet | Address linked via EIP-712 signature for payments/identity |
+| CREATE2 | Deterministic deployment — same addresses across all chains |
+| EIP-712 | Typed structured data signing for wallet binding |
+| ERC-721 | NFT standard. Agent identities are ERC-721 NFTs |
+| ERC-8004 | Standard: three on-chain registries for AI agent economy |
+| Feedback | On-chain rating (-100 to 100) with tags, text, endpoint |
+| Feedback File | IPFS document enriching feedback (text, proof of payment, MCP/A2A/OASF fields) |
+| IPFS | Decentralized storage for registration/feedback files |
+| MCP | Model Context Protocol — primary endpoint type |
+| OASF | Open Agent Skill Framework taxonomy (agntcy/oasf) |
+| Registration File | JSON profile: endpoints, trust models, metadata |
+| Reputation Summary | Aggregated: count + averageValue (-100 to 100) |
+| Subgraph | The Graph indexer — eventual consistency |
+| Trust Label | Derived label based on reputation count/averageValue |
+| Trust Model | `reputation`, `crypto-economic`, or `tee-attestation` |
+| Validation Registry | Third registry for validator attestations (limited SDK support) |
+| WalletConnect | Protocol v2 for remote signing — agent never holds keys |
+| X402 | HTTP 402 payment protocol for agent endpoints via USDC on Base |
 
 ## Further Reading
 
-- [ERC-8004 Best Practices — Registration](https://github.com/erc-8004/best-practices/blob/main/Registration.md)
-- [ERC-8004 Best Practices — Reputation](https://github.com/erc-8004/best-practices/blob/main/Reputation.md)
+- [Registration Best Practices](https://github.com/erc-8004/best-practices/blob/main/Registration.md)
+- [Reputation Best Practices](https://github.com/erc-8004/best-practices/blob/main/Reputation.md)
 - [ERC-8004 Spec](https://github.com/erc-8004/best-practices/blob/main/src/ERC8004SPEC.md)
 - [OASF Taxonomy](https://github.com/agntcy/oasf)
