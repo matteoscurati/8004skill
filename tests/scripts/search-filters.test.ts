@@ -168,6 +168,28 @@ describe('buildSearchFilters', () => {
     expect(filters.chains).toBe('all');
   });
 
+  it('maps --chains CSV to number array', () => {
+    const { filters } = buildSearchFilters({ chains: '1,137,8453' });
+    expect(filters.chains).toEqual([1, 137, 8453]);
+  });
+
+  it('maps --chains single value to number array', () => {
+    const { filters } = buildSearchFilters({ chains: '11155111' });
+    expect(filters.chains).toEqual([11155111]);
+  });
+
+  it('exits on invalid chain ID in --chains CSV', () => {
+    expect(() => buildSearchFilters({ chains: '1,abc,137' })).toThrow('process.exit(1)');
+  });
+
+  it('exits on negative chain ID in --chains CSV', () => {
+    expect(() => buildSearchFilters({ chains: '1,-5' })).toThrow('process.exit(1)');
+  });
+
+  it('exits on fractional chain ID in --chains CSV', () => {
+    expect(() => buildSearchFilters({ chains: '1.5' })).toThrow('process.exit(1)');
+  });
+
   // Time filters
   it('maps --registered-from and --registered-to', () => {
     const { filters } = buildSearchFilters({

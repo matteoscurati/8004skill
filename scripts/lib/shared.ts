@@ -83,7 +83,7 @@ export function isMainScript(importMetaUrl: string): boolean {
 
 // ── Script version ──────────────────────────────────────────────────
 
-export const SCRIPT_VERSION = '2.0.1';
+export const SCRIPT_VERSION = '2.1.0';
 
 // ── CLI argument parsing ────────────────────────────────────────────
 
@@ -110,8 +110,8 @@ export function requireArg(args: Record<string, string>, key: string, label: str
 // ── Validation helpers ──────────────────────────────────────────────
 
 export function parseChainId(raw: string | undefined): number {
-  const val = parseInt(raw ?? '', 10);
-  if (Number.isNaN(val) || val < 1) exitWithError(`Invalid chain-id: "${raw}". Must be a positive integer.`);
+  const val = Number(raw ?? '');
+  if (!Number.isInteger(val) || val < 1) exitWithError(`Invalid chain-id: "${raw}". Must be a positive integer.`);
   return val;
 }
 

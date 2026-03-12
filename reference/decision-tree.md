@@ -34,7 +34,7 @@ When a user's intent is unclear, use this tree to route them to the right operat
 ## Understand the Protocol
 
 - "What is ERC-8004?" → `erc-8004-spec.md`
-- "What does [term] mean?" → `glossary.md`
+- "What does [term] mean?" → `erc-8004-spec.md` (Glossary section)
 - "Which chains are supported?" → `chains.md`
 - "How does trust work?" → `trust-boundaries.md`
 - "What about payments/x402?" → `x402-integration.md`
@@ -42,7 +42,7 @@ When a user's intent is unclear, use this tree to route them to the right operat
 ## Troubleshoot
 
 - "I'm getting an error" → `troubleshooting.md`
-- "On-chain data doesn't match" → `discrepancy-rules.md`
+- "On-chain data doesn't match" → `troubleshooting.md` (Data Discrepancies section)
 
 ## Cross-Platform
 

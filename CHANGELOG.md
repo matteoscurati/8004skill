@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-03-12
+
+### Added
+- 5 new answer-example templates: troubleshooting, whoami, update, x402, transfer (10 total)
+- CSV `--chains` support in search filters (e.g., `--chains 1,137,8453`)
+- TrustModel enum validation for `--trust` flag in update-agent script
+- 5 new unit tests (181 total)
+
+### Changed
+- SKILL.md description expanded to cover all 13 ops plus knowledge/troubleshooting/x402/whoami
+- Trust labels in SKILL.md reformatted to table with emoji caveat
+- Chain disambiguation for "Sepolia" clarified in SKILL.md
+- Multi-step workflow guidance improved in SKILL.md
+- Common errors condensed to one-liner format in SKILL.md
+- Prompt injection example added to Untrusted Data Policy in SKILL.md
+- `parseChainId` tightened to reject fractional values (e.g., `1.5`)
+- Glossary merged into `reference/erc-8004-spec.md` (glossary.md deleted)
+- Data discrepancy rules merged into `reference/troubleshooting.md` (discrepancy-rules.md deleted)
+- Cross-references in `reference/decision-tree.md` updated to point to merged locations
+
+### Removed
+- `reference/glossary.md` (content merged into erc-8004-spec.md)
+- `reference/discrepancy-rules.md` (content merged into troubleshooting.md)
+
 ## [2.0.1] - 2026-03-10
 
 ### Changed

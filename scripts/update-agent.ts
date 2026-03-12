@@ -8,6 +8,7 @@
  *     --rpc-url https://rpc.sepolia.org --ipfs pinata --name "NewName"
  */
 
+import { TrustModel } from 'agent0-sdk';
 import {
   parseArgs,
   requireArg,
@@ -133,11 +134,16 @@ async function main() {
   }
 
   if (args['trust']) {
+    const validModels = Object.values(TrustModel) as string[];
     const trustValues = splitCsv(args['trust']);
+    const invalid = trustValues.filter((v) => !validModels.includes(v));
+    if (invalid.length) {
+      exitWithError(`Unknown trust model(s): ${invalid.join(', ')}. Valid: ${validModels.join(', ')}`);
+    }
     agent.setTrust(
-      trustValues.includes('reputation'),
-      trustValues.includes('crypto-economic'),
-      trustValues.includes('tee-attestation'),
+      trustValues.includes(TrustModel.REPUTATION),
+      trustValues.includes(TrustModel.CRYPTO_ECONOMIC),
+      trustValues.includes(TrustModel.TEE_ATTESTATION),
     );
   }
 

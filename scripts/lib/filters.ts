@@ -1,5 +1,5 @@
 import type { SearchFilters, SearchOptions, FeedbackFilters, FeedbackSearchFilters, FeedbackSearchOptions } from 'agent0-sdk';
-import { splitCsv, exitWithError } from './shared.js';
+import { splitCsv, exitWithError, parseChainId } from './shared.js';
 
 /** Build SearchFilters and SearchOptions from CLI args. */
 export function buildSearchFilters(args: Record<string, string>): { filters: SearchFilters; options: SearchOptions } {
@@ -45,7 +45,13 @@ export function buildSearchFilters(args: Record<string, string>): { filters: Sea
   if (args['wallet-address']) filters.walletAddress = args['wallet-address'];
 
   // Chain filters
-  if (args['chains'] === 'all') filters.chains = 'all';
+  if (args['chains']) {
+    if (args['chains'] === 'all') {
+      filters.chains = 'all';
+    } else {
+      filters.chains = splitCsv(args['chains']).map((v) => parseChainId(v));
+    }
+  }
 
   // Time filters
   if (args['registered-from']) filters.registeredAtFrom = args['registered-from'];
