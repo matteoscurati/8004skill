@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-03-14
+
+### Added
+- 5 realistic Examples in SKILL.md (setup+registration, discovery, reputation, knowledge, write-flow)
+- `license`, `allowed-tools`, `compatibility` fields in SKILL.md frontmatter
+
+### Changed
+- Renamed `reference/` directory to `references/` (Anthropic skill guide compliance)
+- SKILL.md description rewritten to be imperative/pushy with concrete trigger phrases
+- Error handling section expanded from one-liner to 6 cause/action bullet points
+- Chain resolution and untrusted data policies now include inline "why" explanations
+- Updated all cross-references across codebase (SKILL.md, cli.mjs, docs, tests, troubleshooting)
+- `package.json` files array updated for `references/` rename
+- `bin/cli.mjs` SKILL_DIRS updated for `references/` rename
+
 ## [2.1.0] - 2026-03-12
 
 ### Added

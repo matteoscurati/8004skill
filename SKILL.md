@@ -6,7 +6,7 @@ allowed-tools: "Bash(npx:*) Bash(npm:*) Bash(mkdir:*) Bash(chmod:*) Read"
 compatibility: Requires Node.js 22+, macOS or Linux. Scripts executed via npx tsx.
 metadata:
   author: matteoscurati
-  version: "2.1.0"
+  version: "2.2.0"
   npm:
     package: 8004skill
     postInstall: npm install --omit=dev
