@@ -391,7 +391,7 @@ The config directory `~/.8004skill/` is created with `chmod 700`. The agent mana
 
 ### Environment Variables
 
-See [reference/security.md](../reference/security.md#environment-variables-reference) for the canonical environment variables table.
+See [references/security.md](../references/security.md#environment-variables-reference) for the canonical environment variables table.
 
 ### How Config Flows to Scripts
 
@@ -411,7 +411,7 @@ Environment variables (`PINATA_JWT`, `SUBGRAPH_URL`, etc.) pass through the proc
 
 ### Principles
 
-See [reference/security.md](../reference/security.md) for the full security model, including WalletConnect protections, untrusted content policies, and env var handling.
+See [references/security.md](../references/security.md) for the full security model, including WalletConnect protections, untrusted content policies, and env var handling.
 
 ### Threat Surface
 
@@ -527,15 +527,15 @@ Setting an agent wallet requires a typed signature from the target wallet:
 | Base Mainnet | 8453 | Full (registry + subgraph) |
 | Base Sepolia | 84532 | Full (registry + subgraph) |
 
-Additional chains are deployed and can be used with manual configuration (typically `SUBGRAPH_URL`, plus registry overrides only if needed). See [`reference/chains.md`](../reference/chains.md) for the full list, contract addresses, and notes.
+Additional chains are deployed and can be used with manual configuration (typically `SUBGRAPH_URL`, plus registry overrides only if needed). See [`references/chains.md`](../references/chains.md) for the full list, contract addresses, and notes.
 
 ---
 
 ## Reference Documentation
 
-The `reference/` directory contains multiple focused files used by the agent at runtime to answer questions and configure scripts. The most frequently used are:
+The `references/` directory contains multiple focused files used by the agent at runtime to answer questions and configure scripts. The most frequently used are:
 
-### `reference/chains.md`
+### `references/chains.md`
 
 Contract addresses, subgraph URLs, and public RPC endpoints for all supported chains. The agent reads this when:
 
@@ -543,15 +543,15 @@ Contract addresses, subgraph URLs, and public RPC endpoints for all supported ch
 - Suggesting RPC endpoints
 - Linking transaction hashes to block explorers
 
-### `reference/sdk-api.md`
+### `references/sdk-api.md`
 
 Complete `agent0-sdk` API surface: `SDK` class constructor, methods, `Agent` class properties and methods, `TransactionHandle`, search filters, and enums. The agent uses this as context for understanding script capabilities.
 
-### `reference/agent-schema.md`
+### `references/agent-schema.md`
 
 ERC-8004 data structures: registration file format, agent summary (from subgraph), feedback structure, feedback file (off-chain), reputation summary, on-chain metadata, and the EIP-712 wallet signature scheme. Scripts produce output conforming to these structures.
 
-### `reference/security.md`
+### `references/security.md`
 
 Security rules, WalletConnect security model, and untrusted content policies. The agent reads this to enforce:
 
@@ -566,10 +566,10 @@ Security rules, WalletConnect security model, and untrusted content policies. Th
 Scripts do not read reference files directly. The relationship is:
 
 ```
-reference/chains.md       -> The agent reads -> passes --chain-id, --rpc-url to scripts
-reference/sdk-api.md      -> The agent reads -> understands what scripts can do
-reference/agent-schema.md -> The agent reads -> formats script JSON output for user
-reference/security.md     -> The agent reads -> enforces security rules during operations
+references/chains.md       -> The agent reads -> passes --chain-id, --rpc-url to scripts
+references/sdk-api.md      -> The agent reads -> understands what scripts can do
+references/agent-schema.md -> The agent reads -> formats script JSON output for user
+references/security.md     -> The agent reads -> enforces security rules during operations
 ```
 
 The SDK itself has built-in chain configs. Reference docs serve as human-readable documentation that the agent uses for contextual understanding and user-facing explanations.

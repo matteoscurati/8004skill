@@ -16,7 +16,7 @@
   "files": [
     "bin/",
     "scripts/",
-    "reference/",
+    "references/",
     "agents/",
     "assets/",
     "SKILL.md",

@@ -8,9 +8,9 @@ function read(relativePath: string): string {
 
 describe('sdk documentation alignment', () => {
   it('documents the 1.6.0 registration and feedback deltas', () => {
-    const api = read('reference/sdk-api.md');
-    const types = read('reference/sdk-types.md');
-    const schema = read('reference/agent-schema.md');
+    const api = read('references/sdk-api.md');
+    const types = read('references/sdk-types.md');
+    const schema = read('references/agent-schema.md');
 
     expect(api).toContain('registerOnChain()');
     expect(api).toContain(`ipfs?: 'pinata' | 'filecoinPin' | 'node' | 'helia'`);

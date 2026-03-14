@@ -302,7 +302,7 @@ export function getOverridesFromEnv(chainId: number): EnvOverrides {
 // ── Config validation ────────────────────────────────────────────────
 
 /**
- * Known public RPC endpoints per chain ID (from reference/chains.md).
+ * Known public RPC endpoints per chain ID (from references/chains.md).
  * Used to warn when the configured RPC doesn't match any known default.
  */
 const KNOWN_RPC_URLS: Record<number, string[]> = {

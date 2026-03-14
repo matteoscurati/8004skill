@@ -45,7 +45,7 @@ const SKILL_FILES = [
   "package.json",
   "package-lock.json",
 ];
-const SKILL_DIRS = ["scripts", "reference", "bin"];
+const SKILL_DIRS = ["scripts", "references", "bin"];
 
 // ── Formatting ─────────────────────────────────────────────────────────
 const BOLD = "\x1b[1m";

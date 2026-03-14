@@ -18,13 +18,13 @@ All notable changes to this project will be documented in this file.
 - Common errors condensed to one-liner format in SKILL.md
 - Prompt injection example added to Untrusted Data Policy in SKILL.md
 - `parseChainId` tightened to reject fractional values (e.g., `1.5`)
-- Glossary merged into `reference/erc-8004-spec.md` (glossary.md deleted)
-- Data discrepancy rules merged into `reference/troubleshooting.md` (discrepancy-rules.md deleted)
-- Cross-references in `reference/decision-tree.md` updated to point to merged locations
+- Glossary merged into `references/erc-8004-spec.md` (glossary.md deleted)
+- Data discrepancy rules merged into `references/troubleshooting.md` (discrepancy-rules.md deleted)
+- Cross-references in `references/decision-tree.md` updated to point to merged locations
 
 ### Removed
-- `reference/glossary.md` (content merged into erc-8004-spec.md)
-- `reference/discrepancy-rules.md` (content merged into troubleshooting.md)
+- `references/glossary.md` (content merged into erc-8004-spec.md)
+- `references/discrepancy-rules.md` (content merged into troubleshooting.md)
 
 ## [2.0.1] - 2026-03-10
 

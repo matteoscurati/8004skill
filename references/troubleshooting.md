@@ -72,13 +72,13 @@ Common errors and their solutions, organized by category.
 ### "could not detect network" / RPC connection errors
 **Cause**: RPC endpoint is unreachable or rate-limited.
 **Fix**:
-1. Try a different public RPC from `reference/chains.md`
+1. Try a different public RPC from `references/chains.md`
 2. Check if the endpoint requires an API key
 3. For production use, consider a dedicated RPC provider (Alchemy, Infura, Ankr)
 
 ### "unknown chain" / chain not supported
 **Cause**: Chain ID not recognized by the SDK.
-**Fix**: For the 5 fully supported chains, verify the chain ID. For deployed-but-not-indexed chains, you need to set `SUBGRAPH_URL` manually. See `reference/chains.md` for the full list.
+**Fix**: For the 5 fully supported chains, verify the chain ID. For deployed-but-not-indexed chains, you need to set `SUBGRAPH_URL` manually. See `references/chains.md` for the full list.
 
 ### Stale data after a write
 **Cause**: Subgraph indexing has a delay (seconds to minutes) after on-chain transactions.

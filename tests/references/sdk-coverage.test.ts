@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
-const coverage = readFileSync(resolve(process.cwd(), 'reference/sdk-api.md'), 'utf8');
+const coverage = readFileSync(resolve(process.cwd(), 'references/sdk-api.md'), 'utf8');
 
 const SDK_METHODS = [
   'SDK.chainId()',

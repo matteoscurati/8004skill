@@ -41,7 +41,7 @@ The `dist/` directory is gitignored. It is not used at runtime — scripts are e
 | `bin/cli.mjs` | CLI entry point (`npx 8004skill <cmd>`). Vanilla ESM JS, no external deps. |
 | `scripts/` | TypeScript scripts executed at runtime via `npx tsx`. |
 | `scripts/lib/` | Shared utilities (`shared.ts`, `walletconnect.ts`). |
-| `reference/` | Runtime docs consumed by the agent (chains, SDK API, schema, security). |
+| `references/` | Runtime docs consumed by the agent (chains, SDK API, schema, security). |
 | `.claude-skill.json` | Skill metadata for ecosystem tools. |
 | `SKILL.md` | Skill definition read by the agent. |
 
@@ -50,11 +50,11 @@ The `dist/` directory is gitignored. It is not used at runtime — scripts are e
 1. Create `scripts/<name>.ts` following the existing pattern: parse CLI args with `parseArgs()`, validate, call `agent0-sdk`, output JSON to stdout, catch errors with `handleError()`.
 2. Use helpers from `scripts/lib/shared.ts` — at minimum `parseArgs()` for argument parsing and `handleError()` as the catch handler. Other utilities: `requireArg`, `requireChainId`, `parseChainId`, `validateAgentId`, `validateAddress`, `validateIpfsProvider`, `buildSdkConfig`, `extractIpfsConfig`, `outputJson`, `tryCatch`, `submitAndWait`, `exitWithError`.
 3. Add the corresponding operation wizard flow in `SKILL.md`.
-4. If the script introduces new data structures, document them in `reference/agent-schema.md`.
+4. If the script introduces new data structures, document them in `references/agent-schema.md`.
 
 ## Updating reference docs
 
-The `reference/` directory contains docs consumed by the skill at runtime. Keep them in sync with any SDK or protocol changes:
+The `references/` directory contains docs consumed by the skill at runtime. Keep them in sync with any SDK or protocol changes:
 
 - `chains.md` — supported chains, contract addresses, RPC endpoints
 - `sdk-api.md` — agent0-sdk API surface

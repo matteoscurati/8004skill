@@ -158,7 +158,7 @@ The SDK supports 5 chains:
 | Base Mainnet | 8453 | Full (registry + subgraph) |
 | Base Sepolia | 84532 | Full (registry + subgraph) |
 
-Additional chains are deployed and usable with manual configuration (typically `SUBGRAPH_URL`, plus registry overrides only if needed). See [`reference/chains.md`](reference/chains.md) for the full list.
+Additional chains are deployed and usable with manual configuration (typically `SUBGRAPH_URL`, plus registry overrides only if needed). See [`references/chains.md`](references/chains.md) for the full list.
 
 ## Manual Installation
 
