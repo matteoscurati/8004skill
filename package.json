@@ -19,6 +19,7 @@
     "references/",
     "agents/",
     "assets/",
+    "releases/",
     "SKILL.md",
     "CLAUDE.md",
     ".claude-skill.json",
