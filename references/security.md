@@ -40,17 +40,16 @@ X402 payments involve on-chain value transfer. The SDK provides safety mechanism
 
 ### Amount Verification
 
-- Always set `maxAmount` in `X402RequestOptions` to cap the maximum payment per request. Without it, a malicious endpoint could request an arbitrarily large payment.
-- The `maxAmount` value is in the token's smallest unit (e.g., USDC has 6 decimals, so `1000000` = 1 USDC).
-- `sdk.request()` returns the payment details without paying — inspect `x402Payment.accepts` before calling `pay()`.
-- `sdk.fetchWithX402()` auto-pays, so `maxAmount` is the only safeguard.
+- The SDK's `X402RequestOptions` does NOT include a `maxAmount` field. Amount capping is a CLI-level feature: use the `--max-amount` flag in `scripts/x402-pay.ts` to reject payments above a threshold before calling `pay()`.
+- `sdk.request()` returns the payment details without paying -- inspect `x402Payment.accepts` (price, token, network) before calling `pay()`.
+- `sdk.fetchWithX402()` is an alias for `sdk.request()` (same return type) -- it does NOT auto-pay. You always have the opportunity to inspect `x402Payment` before paying.
 
 ### Signing Methods
 
 | Method | Security Profile | When to Use |
 |--------|-----------------|-------------|
 | WalletConnect (`walletProvider`) | User approves each payment in wallet app | Human-supervised agents, high-value payments |
-| Private Key (`privateKey`) | Auto-signs without approval | Autonomous agents, micro-payments with `maxAmount` cap |
+| Private Key (`privateKey`) | Auto-signs without approval | Autonomous agents, micro-payments (use CLI `--max-amount` to cap) |
 
 ### EIP-3009 Authorization
 
@@ -62,11 +61,10 @@ X402 payments on Base use EIP-3009 (`transferWithAuthorization`) for USDC. This 
 
 ### Best Practices
 
-1. **Cap spending**: Always set `maxAmount`. Start low and increase as needed.
-2. **Use WalletConnect for high-value operations**: Let the user review each payment.
-3. **Use `sdk.request()` over `sdk.fetchWithX402()`**: Inspect payment details before paying.
-4. **Monitor balances**: Autonomous agents should check USDC balance before making requests.
-5. **Rotate `PRIVATE_KEY` if exposed**: If the key is compromised, the attacker can sign arbitrary payments. Revoke and rotate immediately.
+1. **Inspect before paying**: Use `sdk.request()` and check `x402Payment.accepts` (price, token, network) before calling `pay()`. The CLI script `x402-pay.ts` supports `--max-amount` to reject payments above a threshold.
+2. **Use WalletConnect for high-value operations**: Let the user review each payment in their wallet app.
+3. **Monitor balances**: Autonomous agents should check USDC balance before making requests.
+4. **Rotate `PRIVATE_KEY` if exposed**: If the key is compromised, the attacker can sign arbitrary payments. Revoke and rotate immediately.
 
 ## Environment Variables Reference
 

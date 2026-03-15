@@ -21,7 +21,7 @@
 }
 ```
 
-`Agent.registerOnChain()` publishes the same logical registration JSON as a `data:application/json;base64,...` `agentURI`. `SDK.loadAgent()` in v1.6.0 can decode those ERC-8004 data URIs directly.
+`Agent.registerOnChain()` publishes the same logical registration JSON as a `data:application/json;base64,...` `agentURI`. `SDK.loadAgent()` in v1.6.0+ can decode those ERC-8004 data URIs directly.
 
 ## Agent Summary / Feedback / Reputation Summary
 

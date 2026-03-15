@@ -46,37 +46,39 @@ Starting with v1.7.0, the SDK provides built-in x402 payment handling. Two appro
 ### Manual Flow: `sdk.request()`
 
 ```typescript
-const result = await sdk.request('https://agent.example.com/api/analyze', {
+const result = await sdk.request({
+  url: 'https://agent.example.com/api/analyze',
   method: 'POST',
   body: JSON.stringify({ code: '...' }),
-  maxAmount: '1000000',  // Safety cap: 1 USDC (6 decimals)
 });
 
 if (result.x402Required) {
   // Inspect payment details before paying
-  console.log(result.x402Payment.accepts);  // Payment options
-  console.log(result.x402Payment.resource); // Resource info
+  console.log(result.x402Payment.accepts);  // Payment options (X402Accept[])
+  console.log(result.x402Payment.resource); // Resource info (optional)
 
   // Execute payment (requires privateKey or walletProvider in SDK config)
-  const settlement = await result.x402Payment.pay();
-  console.log(settlement.txHash);     // On-chain tx hash
-  console.log(settlement.response);   // Unlocked HTTP response
+  // pay() resolves to T (the parsed success response)
+  const data = await result.x402Payment.pay();
+  console.log(data);  // Unlocked response body (parsed JSON by default)
 } else {
-  // No payment required — use the response directly
-  console.log(await result.response.json());
+  // No payment required — result IS the parsed response (T & { x402Required?: false })
+  console.log(result);
 }
 ```
 
-### Auto-Pay Flow: `sdk.fetchWithX402()`
+### `sdk.fetchWithX402()` (Alias)
+
+`fetchWithX402()` is an alias for `sdk.request()` -- same single-object signature, same return type. It does NOT auto-pay.
 
 ```typescript
-// Automatically pays on 402 and returns the unlocked response
-const response = await sdk.fetchWithX402('https://agent.example.com/api/analyze', {
+// Identical to sdk.request() — use whichever name reads better in context
+const result = await sdk.fetchWithX402({
+  url: 'https://agent.example.com/api/analyze',
   method: 'POST',
   body: JSON.stringify({ code: '...' }),
-  maxAmount: '1000000',  // Safety cap
 });
-const data = await response.json();
+// result is X402RequestResult<T>: check result.x402Required to determine branch
 ```
 
 ### Signing Methods: WalletConnect vs PRIVATE_KEY
@@ -88,33 +90,40 @@ const data = await response.json();
 
 **WalletConnect**: Safer for human-supervised agents. Each x402 payment triggers a signing request in the wallet app. The user sees the amount and recipient before approving.
 
-**PRIVATE_KEY**: Required for fully autonomous agents that need to pay without human intervention. The key is loaded from `~/.8004skill/.env` (never in chat). Use `maxAmount` to cap spending.
+**PRIVATE_KEY**: Required for fully autonomous agents that need to pay without human intervention. The key is loaded from `~/.8004skill/.env` (never in chat). Use the CLI-level `--max-amount` flag in `x402-pay.ts` to cap spending.
 
 ## A2A + X402 Combined Flow
 
-When an agent's A2A endpoint requires payment, the SDK handles the 402 transparently:
+When an agent's A2A endpoint requires payment, the SDK returns an `A2APaymentRequired` union variant (it is NOT a thrown exception):
 
 ```typescript
 const agent = await sdk.loadAgent('8453:42');
 
-// messageA2A may return a 402 if the agent charges for responses
-try {
-  const response = await agent.messageA2A('Analyze this contract for vulnerabilities');
-  console.log(response.parts);  // Agent's response
-} catch (err) {
-  if (err instanceof A2APaymentRequired) {
-    // Agent requires payment — inspect and pay
-    const settlement = await err.x402Payment.pay();
-    // Retry the message (the task continues after payment)
-    const response = await agent.messageA2A('Analyze this contract for vulnerabilities', {
-      taskId: err.taskId,  // Continue the same task
-    });
-    console.log(response.parts);
+// messageA2A returns a union: MessageResponse | TaskResponse | A2APaymentRequired
+const result = await agent.messageA2A('Analyze this contract for vulnerabilities');
+
+if (result.x402Required) {
+  // Agent requires payment — inspect and pay
+  console.log(result.x402Payment.accepts);  // Payment options
+  console.log(result.x402Payment.price);    // Convenience price (single accept)
+
+  // pay() resolves to the same type as a successful response (MessageResponse | TaskResponse)
+  const response = await result.x402Payment.pay();
+  console.log(response);  // Agent's response after payment
+} else {
+  // No payment required — result is MessageResponse or TaskResponse
+  if ('task' in result) {
+    // TaskResponse: server created a task
+    const task = result.task;  // AgentTask handle
+    const queryResult = await task.query();
+  } else {
+    // MessageResponse: direct reply
+    console.log(result.parts);
   }
 }
 ```
 
-Alternatively, use `sdk.fetchWithX402()` to auto-pay A2A endpoints that return 402.
+Note: `A2APaymentRequired` is a union return type with `x402Required: true`. Use `result.x402Required` to discriminate -- do NOT use `instanceof` or try/catch.
 
 ## Typical Workflow
 
@@ -122,4 +131,4 @@ Alternatively, use `sdk.fetchWithX402()` to auto-pay A2A endpoints that return 4
 2. **Enable x402**: `--x402 true` on register or update
 3. **Set wallet**: Operation 7 (receives USDC payments)
 4. **Monetize endpoint**: use `x402-express` middleware on your server
-5. **Discover + pay**: clients use `awal` or `sdk.request()` / `sdk.fetchWithX402()` to find and pay your agent
+5. **Discover + pay**: clients use `awal` or `sdk.request()` (/ `sdk.fetchWithX402()`, which is an alias) to find and pay your agent

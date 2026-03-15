@@ -286,7 +286,7 @@ Result: txHash, agentId, new owner.
 ## Operations 11-13: Utility (Read-only)
 
 - **Get Agent Summary** (Op 11, "get summary", "fetch indexed agent"): `get-agent.ts --agent-id --chain-id --rpc-url`. Returns indexed `AgentSummary` (lighter than `load-agent.ts`).
-- **Ownership** (Op 12, "who owns", "check ownership"): `ownership.ts --action get-owner|is-owner --agent-id --chain-id --rpc-url [--address]`.
+- **Ownership** (Op 12, "who owns", "check ownership"): `ownership.ts --action get-owner|is-owner --agent-id --chain-id --rpc-url [--address]`. Note: `--address` is required for `is-owner`.
 - **SDK Diagnostics** (Op 13, "sdk info", "registry addresses"): `sdk-info.ts --chain-id --rpc-url [--subgraph-chain-id]`. Shows registry map, read-only status, client availability.
 
 ---
@@ -297,7 +297,7 @@ Result: txHash, agentId, new owner.
 
 Agent-to-agent messaging via the A2A protocol. The target agent must have an A2A endpoint registered. A2A is HTTP-level — no on-chain transaction needed unless the endpoint returns HTTP 402 (payment required).
 
-Script: `a2a.ts` — Required: `--action`, `--agent-id`, `--chain-id`, `--rpc-url`. Optional: `--message` (send), `--task-id` (get/cancel), `--credential`, `--context-id`, `--blocking`.
+Script: `a2a.ts` — Required: `--action`, `--agent-id`, `--chain-id`, `--rpc-url`. Optional: `--message` (send), `--task-id` (get/cancel), `--credential`, `--context-id`, `--blocking` (default: true).
 
 **Actions**: `send` (message text → response or task creation), `list-tasks` (task summaries), `get-task` (task status + artifacts), `cancel-task` (cancellation). If send returns 402 → show payment details, link to Operation 15. Pass `--credential <api-key>` for authenticated A2A endpoints.
 
@@ -309,6 +309,6 @@ Script: `a2a.ts` — Required: `--action`, `--agent-id`, `--chain-id`, `--rpc-ur
 
 Execute HTTP requests with automatic x402 payment handling. Requires signing capability (WalletConnect session or `PRIVATE_KEY` in `~/.8004skill/.env`).
 
-Script: `x402-pay.ts` — Required: `--url`, `--chain-id`, `--rpc-url`. Optional: `--method` (GET|POST), `--body`, `--auto-pay`, `--max-amount` (USD safety cap).
+Script: `x402-pay.ts` — Required: `--url`, `--chain-id`, `--rpc-url`. Optional: `--method` (GET|POST|PUT|DELETE|PATCH, default GET), `--body`, `--auto-pay`, `--max-amount` (USD safety cap).
 
 **Flow**: Request endpoint → if 2xx return response → if 402 display payment details (amount, token, chain, recipient) → if `--auto-pay` pay within `--max-amount` cap → else output details for user review. Always confirm before payment: Amount, Recipient, Chain, Signing method (WC or PRIVATE_KEY).

@@ -62,18 +62,18 @@ sdk.isAgentOwner(agentId, address): Promise<boolean>
 sdk.getAgentOwner(agentId): Promise<Address>
 
 // X402 Payment Handling (v1.7.0+)
-sdk.request(url: string, options?: X402RequestOptions): Promise<X402RequestResult>
+sdk.request<T = object>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>>
   // Makes HTTP request with built-in 402 handling.
-  // Returns { x402Required: false, response: Response } on success,
-  //   or { x402Required: true, x402Payment: X402Payment } on HTTP 402.
-sdk.fetchWithX402(url: string, options?: X402RequestOptions): Promise<Response>
-  // Like sdk.request() but auto-pays on 402 and returns the unlocked response.
-  // Requires privateKey or walletProvider for signing.
+  // On 2xx: returns the parsed result as T & { x402Required?: false } (default parser: res.json()).
+  // On 402: returns { x402Required: true, x402Payment: X402Payment<T> }.
+  // Use x402Payment.pay() to pay and retry; pay() resolves to T.
+sdk.fetchWithX402<T = object>(options: X402RequestOptions<T>): Promise<X402RequestResult<T>>
+  // Alias for sdk.request() — same signature and return type.
 
 // A2A Client Factory (v1.7.0+)
-sdk.createA2AClient(agentId: string): Promise<A2AClient>
-  // Creates an A2A client for messaging the specified agent.
-  // Fetches the agent's A2A endpoint and agent card automatically.
+sdk.createA2AClient(agentOrSummary: Agent | AgentSummary): Agent | A2AClientFromSummary
+  // Synchronous. When given an Agent, returns it as-is (Agent already has messageA2A, listTasks, loadTask).
+  // When given an AgentSummary, returns an A2AClientFromSummary that resolves the agent card on first use.
 ```
 
 ## Agent Class
@@ -99,14 +99,18 @@ sdk.createA2AClient(agentId: string): Promise<A2AClient>
 // Data: getRegistrationFile(), getMetadata()
 
 // A2A Messaging (v1.7.0+)
-agent.messageA2A(message: string, options?: MessageA2AOptions): Promise<MessageResponse>
-  // Send a message to the agent's A2A endpoint. Returns task state + response parts.
-agent.message(message: string, options?: MessageA2AOptions): Promise<MessageResponse>
+agent.messageA2A(content: string | { parts: Part[] }, options?: MessageA2AOptions):
+  Promise<MessageResponse | TaskResponse | A2APaymentRequired<MessageResponse | TaskResponse>>
+  // Send a message to the agent's A2A endpoint. Returns MessageResponse (direct reply),
+  // TaskResponse (task created), or A2APaymentRequired (402 — call x402Payment.pay() to retry).
+agent.message(content: string | { parts: Part[] }, options?: MessageA2AOptions):
+  Promise<MessageResponse | TaskResponse | A2APaymentRequired<MessageResponse | TaskResponse>>
   // Alias for messageA2A().
-agent.listTasks(options?: ListTasksOptions): Promise<TaskSummary[]>
-  // List tasks for this agent (optionally filtered by state, limit, offset).
-agent.loadTask(taskId: string, options?: LoadTaskOptions): Promise<AgentTask>
+agent.listTasks(options?: ListTasksOptions): Promise<TaskSummary[] | A2APaymentRequired<TaskSummary[]>>
+  // List tasks for this agent. May return A2APaymentRequired on 402.
+agent.loadTask(taskId: string, options?: LoadTaskOptions): Promise<AgentTask | A2APaymentRequired<AgentTask>>
   // Load a specific task by ID. Returns an AgentTask with query/message/cancel methods.
+  // May return A2APaymentRequired on 402.
 ```
 
 ## AgentTask
@@ -116,13 +120,20 @@ Returned by `agent.loadTask()`. Represents an ongoing A2A task.
 ```typescript
 const task = await agent.loadTask(taskId);
 
-task.id: string              // Task ID
-task.state: TaskState        // 'submitted' | 'working' | 'input-required' | 'completed' | 'canceled' | 'failed'
-task.parts: Part[]           // Response parts (text, data, file)
+task.taskId: string           // Task ID (readonly)
+task.contextId: string        // Context ID (readonly)
 
-task.query(): Promise<TaskResponse>       // Poll the task for updated state and parts
-task.message(text: string): Promise<TaskResponse>  // Send a follow-up message to the task
-task.cancel(): Promise<TaskResponse>      // Cancel the task
+task.query(options?: { historyLength?: number }):
+  Promise<TaskQueryResult | A2APaymentRequired<TaskQueryResult>>
+  // Poll for updated state. TaskQueryResult = { taskId, contextId, status?, artifacts?, messages? }
+
+task.message(content: string | { parts: Part[] }):
+  Promise<MessageResponse | TaskResponse | A2APaymentRequired<MessageResponse | TaskResponse>>
+  // Send a follow-up message
+
+task.cancel():
+  Promise<TaskCancelResult | A2APaymentRequired<TaskCancelResult>>
+  // Cancel the task. TaskCancelResult = { taskId, contextId, status? }
 ```
 
 ## TransactionHandle
@@ -190,13 +201,13 @@ Maps each public method to the skill script that uses it.
 | `Agent.setAgentURI()` | `scripts/update-agent.ts --storage http` |
 | `Agent.transfer()` | Covered by `scripts/transfer.ts` via `SDK.transferAgent()` |
 
-| `SDK.request()` | `scripts/x402-status.ts` (readiness check) |
-| `SDK.fetchWithX402()` | Not yet wrapped by a skill script |
+| `SDK.request()` | `scripts/x402-pay.ts` (wraps `sdk.request()` with CLI flags) |
+| `SDK.fetchWithX402()` | Alias for `SDK.request()` — same coverage via `scripts/x402-pay.ts` |
 | `SDK.createA2AClient()` | Not yet wrapped by a skill script |
-| `Agent.messageA2A()` | Not yet wrapped by a skill script |
+| `Agent.messageA2A()` | Covered by `a2a.ts` via `messageA2A` (wraps `sendMessage`) |
 | `Agent.message()` | Alias for `Agent.messageA2A()` |
-| `Agent.listTasks()` | Not yet wrapped by a skill script |
-| `Agent.loadTask()` | Not yet wrapped by a skill script |
+| `Agent.listTasks()` | Covered by `a2a.ts` via `listTasks` |
+| `Agent.loadTask()` | Covered by `a2a.ts` via `loadTask` / `getTask` + `createTaskHandle` |
 
 Validation registry request/response flows remain reference-only because the public `SDK` package does not yet expose validation helpers in `v1.7.0`. See `validation-registry.md`.
 
