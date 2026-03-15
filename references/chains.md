@@ -1,10 +1,55 @@
 # Supported Chains
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.0, March 2026.
+
+## Default RPC URLs (v1.7.0+)
+
+Starting with v1.7.0, the SDK ships with built-in default RPC URLs for all full-support chains. This means `rpcUrl` is now **optional** in SDKConfig when targeting these chains — the SDK will use its built-in default automatically.
+
+To override the default RPC for any chain (e.g., to use a dedicated provider like Alchemy or Infura), use the `overrideRpcUrls` config option:
+
+```typescript
+const sdk = new SDK({
+  chainId: 8453,
+  // No rpcUrl needed — SDK uses built-in default for Base
+  overrideRpcUrls: {
+    8453: 'https://base-mainnet.g.alchemy.com/v2/YOUR_KEY',  // Override Base
+    1: 'https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY',      // Override Mainnet
+  },
+});
+```
+
+`overrideRpcUrls` is a `Record<number, string>` mapping chain IDs to RPC URLs. It applies to the primary chain and to any cross-chain `loadAgent()` calls.
+
+## Cross-Chain `loadAgent()` (v1.7.0+)
+
+The SDK can now load agents from a different chain than the one the SDK is initialized on. For example, an SDK initialized on Base (8453) can load an agent registered on Ethereum Mainnet (1):
+
+```typescript
+const sdk = new SDK({ chainId: 8453 });
+const agent = await sdk.loadAgent('1:42');  // Loads agent 42 from Ethereum Mainnet
+```
+
+The SDK resolves the target chain's RPC URL in this order:
+1. `overrideRpcUrls[targetChainId]` if set
+2. Built-in default RPC for the target chain (full-support chains only)
+3. Error if no RPC is available for the target chain
+
+For deployed-but-not-indexed chains, provide the RPC via `overrideRpcUrls`:
+
+```typescript
+const sdk = new SDK({
+  chainId: 8453,
+  overrideRpcUrls: {
+    42161: 'https://arb1.arbitrum.io/rpc',  // Needed for cross-chain load from Arbitrum
+  },
+});
+const agent = await sdk.loadAgent('42161:7');  // Loads agent 7 from Arbitrum
+```
 
 ## Full SDK Support
 
-These chains have built-in registry addresses and subgraph URLs. They work out of the box with the public SDK package — no configuration overrides needed.
+These chains have built-in registry addresses, subgraph URLs, and default RPC URLs (v1.7.0+). They work out of the box with the public SDK package — no configuration overrides needed.
 
 | Chain | Chain ID | Type | Notes |
 |-------|----------|------|-------|

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-8004skill is a Claude Code skill for the ERC-8004 on-chain agent economy protocol. It provides a conversational wizard interface (defined in SKILL.md) that runs TypeScript CLI scripts to register agents, discover peers, manage reputation, and enable agent-to-agent interactions across EVM chains. The current workspace targets the `agent0-sdk` v1.6.0 API surface (this repo links to the local `agent0-ts` source during development). All signing is done via WalletConnect v2 — the agent never holds private keys.
+8004skill is a Claude Code skill for the ERC-8004 on-chain agent economy protocol. It provides a conversational wizard interface (defined in SKILL.md) that runs TypeScript CLI scripts to register agents, discover peers, manage reputation, send A2A messages, execute x402 payments, and enable agent-to-agent interactions across EVM chains. The current workspace targets the `agent0-sdk` v1.7.0 API surface (this repo links to the local `agent0-ts` source during development). Primary signing via WalletConnect v2; `PRIVATE_KEY` env var available for headless/server-side signing.
 
 ## Distribution
 
@@ -34,7 +34,7 @@ See [docs/architecture.md](docs/architecture.md) for detailed runtime flow, scri
 
 - Agent ID format: `chainId:tokenId` (e.g., `11155111:42`)
 - All write operations must show a confirmation summary and get explicit user approval before executing
-- All signing is done via WalletConnect v2 — private keys never touch the agent
+- Primary signing via WalletConnect v2; `PRIVATE_KEY` in `~/.8004skill/.env` as headless alternative for x402 payments and automated workflows
 - WalletConnect session state is serialized to `~/.8004skill/wc-storage.json`; each script restores the session, does its work, exits
 - Raw CLI commands are never shown to the user
 - ESM throughout (`"type": "module"` in package.json)

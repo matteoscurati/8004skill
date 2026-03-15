@@ -1,6 +1,6 @@
 # Troubleshooting
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.0, March 2026.
 
 Common errors and their solutions, organized by category.
 
@@ -151,6 +151,73 @@ Run `npx tsx scripts/check-env.ts` to diagnose common issues. It checks:
 - IPFS provider configuration
 - Environment variable presence
 - Cloud sync detection
+
+## X402 Payment Errors (v1.7.0+)
+
+### "402 without accepts header"
+**Cause**: The endpoint returned HTTP 402 but did not include the required `X-402-Accepts` header with payment details.
+**Fix**: The endpoint is not properly configured for x402. Contact the agent operator. The server must use `x402-express` middleware (or equivalent) that sets the `X-402-Accepts` header.
+
+### "Insufficient USDC balance"
+**Cause**: The paying wallet does not have enough USDC to cover the requested payment amount.
+**Fix**:
+1. Check USDC balance on the payment network (usually Base, chain 8453)
+2. Bridge or transfer USDC to the wallet
+3. For testnets, obtain test USDC from faucets
+
+### "Payment rejected" / "transferWithAuthorization failed"
+**Cause**: The on-chain payment transaction was rejected. Common reasons: expired authorization, insufficient allowance, nonce already used.
+**Fix**:
+1. Retry the request — the SDK generates a fresh authorization with a new nonce
+2. Check that the wallet has sufficient USDC balance
+3. If using `privateKey`, verify the key corresponds to the wallet with USDC
+
+### "maxAmount exceeded"
+**Cause**: The endpoint is requesting more than the `maxAmount` safety cap set in the request options.
+**Fix**: Either increase `maxAmount` if the price is expected, or do not pay — the endpoint may be overcharging. Use `sdk.request()` to inspect `x402Payment.accepts` before deciding.
+
+### "No signer available for x402 payment"
+**Cause**: `sdk.request()` returned `x402Required: true`, but the SDK has no `privateKey` or `walletProvider` to sign the payment.
+**Fix**: Provide either `privateKey` in SDKConfig (for autonomous agents) or `walletProvider` (for WalletConnect-based agents). Read-only SDK instances cannot make payments.
+
+## A2A Messaging Errors (v1.7.0+)
+
+### "No A2A endpoint"
+**Cause**: The target agent does not have an A2A endpoint registered.
+**Fix**:
+1. Verify the agent has an A2A endpoint: use `load-agent.ts` and check the `a2aEndpoint` field
+2. If you own the agent, add one: `update-agent.ts --a2a-endpoint https://...`
+3. Not all agents support A2A — some only expose MCP endpoints
+
+### "Agent card fetch failed"
+**Cause**: The agent's A2A endpoint URL is unreachable or does not serve a valid agent card.
+**Fix**:
+1. Check the endpoint URL with `connect.ts` to verify reachability
+2. The agent card should be served at `<a2a-endpoint>/.well-known/agent.json`
+3. The server may be down — try again later
+
+### "Task not found"
+**Cause**: The task ID provided to `agent.loadTask()` or `task.query()` does not exist on the target agent.
+**Fix**:
+1. Verify the task ID is correct
+2. Tasks may expire — the agent may have purged old tasks
+3. Use `agent.listTasks()` to see available tasks
+
+### "Task in terminal state"
+**Cause**: Attempting to send a message to a task that is already `completed`, `canceled`, or `failed`.
+**Fix**: Start a new task by calling `agent.messageA2A()` without a `taskId`.
+
+## Cross-Chain Loading Errors (v1.7.0+)
+
+### "No RPC URL for chain <chainId>"
+**Cause**: `sdk.loadAgent()` was called with an agent ID from a chain the SDK does not have an RPC URL for.
+**Fix**:
+1. For full-support chains (1, 11155111, 137, 8453, 84532), this should not happen — built-in defaults exist
+2. For other chains, provide the RPC via `overrideRpcUrls` in SDKConfig:
+   ```typescript
+   new SDK({ chainId: 8453, overrideRpcUrls: { 42161: 'https://arb1.arbitrum.io/rpc' } })
+   ```
+3. See `references/chains.md` for public RPC endpoints
 
 ## Data Discrepancies
 

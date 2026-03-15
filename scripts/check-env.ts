@@ -10,7 +10,7 @@
 import { existsSync, realpathSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { handleError, SCRIPT_VERSION, validateConfig, outputJson, DOT_ENV_PATH, formatPermissions } from './lib/shared.js';
+import { handleError, SCRIPT_VERSION, validateConfig, outputJson, DOT_ENV_PATH, formatPermissions, getSigningMode } from './lib/shared.js';
 import { getSessionInfo, getWcStoragePath } from './lib/walletconnect.js';
 
 // ── Security warnings ──────────────────────────────────────────────
@@ -133,8 +133,10 @@ function main(): void {
       storagePath: getWcStoragePath(),
     },
     dotenvFile: existsSync(DOT_ENV_PATH),
+    signingMode: getSigningMode(),
     envVars: {
       WC_PROJECT_ID: !!process.env.WC_PROJECT_ID,
+      PRIVATE_KEY: !!process.env.PRIVATE_KEY,
       PINATA_JWT: !!process.env.PINATA_JWT,
       FILECOIN_PRIVATE_KEY: !!process.env.FILECOIN_PRIVATE_KEY,
       IPFS_NODE_URL: !!process.env.IPFS_NODE_URL,

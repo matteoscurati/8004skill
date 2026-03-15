@@ -83,7 +83,7 @@ export function isMainScript(importMetaUrl: string): boolean {
 
 // ── Script version ──────────────────────────────────────────────────
 
-export const SCRIPT_VERSION = '2.1.0';
+export const SCRIPT_VERSION = '2.3.0';
 
 // ── CLI argument parsing ────────────────────────────────────────────
 
@@ -202,6 +202,8 @@ export function buildSdkConfig(opts: {
   chainId: number;
   rpcUrl: string;
   walletProvider?: EthereumProvider;
+  privateKey?: string;
+  overrideRpcUrls?: Record<number, string>;
   ipfsProvider?: string;
   pinataJwt?: string;
   filecoinPrivateKey?: string;
@@ -211,6 +213,8 @@ export function buildSdkConfig(opts: {
 }): SDKConfig {
   const config: SDKConfig = { chainId: opts.chainId, rpcUrl: opts.rpcUrl };
   if (opts.walletProvider) config.walletProvider = opts.walletProvider;
+  if (opts.privateKey) config.privateKey = opts.privateKey;
+  if (opts.overrideRpcUrls) config.overrideRpcUrls = opts.overrideRpcUrls;
   if (opts.subgraphUrl) config.subgraphUrl = opts.subgraphUrl;
   if (opts.registryOverrides) config.registryOverrides = opts.registryOverrides;
 
@@ -241,19 +245,49 @@ export function buildSdkConfig(opts: {
 }
 
 /**
+ * Collect OVERRIDE_RPC_{chainId} env vars into a Record.
+ */
+export function getOverrideRpcUrlsFromEnv(): Record<number, string> {
+  const result: Record<number, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.startsWith('OVERRIDE_RPC_') && value) {
+      const chainId = Number(key.slice('OVERRIDE_RPC_'.length));
+      if (Number.isInteger(chainId) && chainId > 0) {
+        result[chainId] = value;
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Determine the signing mode based on available env credentials.
+ * Returns 'privatekey' if PRIVATE_KEY is set, otherwise 'readonly'.
+ * WalletConnect availability requires checking the session file (use loadWalletProvider).
+ */
+export function getSigningMode(): 'privatekey' | 'readonly' {
+  if (process.env.PRIVATE_KEY) return 'privatekey';
+  return 'readonly';
+}
+
+/**
  * Create an SDK instance with environment overrides applied automatically.
  */
 export function createSdk(opts: {
   chainId: number;
   rpcUrl: string;
   walletProvider?: EthereumProvider;
+  privateKey?: string;
   ipfs?: IpfsConfig;
 }): SDK {
   const { ipfs, ...rest } = opts;
+  const envRpcOverrides = getOverrideRpcUrlsFromEnv();
   return new SDK(buildSdkConfig({
     ...rest,
     ...ipfs,
     ...getOverridesFromEnv(opts.chainId),
+    ...(Object.keys(envRpcOverrides).length > 0 && { overrideRpcUrls: envRpcOverrides }),
+    privateKey: rest.privateKey || process.env.PRIVATE_KEY,
   }));
 }
 

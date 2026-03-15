@@ -14,6 +14,8 @@ import {
   buildSdkConfig,
   extractIpfsConfig,
   getOverridesFromEnv,
+  getOverrideRpcUrlsFromEnv,
+  getSigningMode,
   validateIpfsEnv,
   tryCatch,
   exitWithError,
@@ -542,6 +544,93 @@ describe('createSdk', () => {
       ipfs: { ipfsProvider: 'pinata', pinataJwt: 'test-jwt' },
     });
     expect(sdk).toBeDefined();
+  });
+});
+
+describe('getOverrideRpcUrlsFromEnv', () => {
+  it('returns empty object when no override env vars set', () => {
+    expect(getOverrideRpcUrlsFromEnv()).toEqual({});
+  });
+
+  it('collects OVERRIDE_RPC_{chainId} env vars', () => {
+    vi.stubEnv('OVERRIDE_RPC_84532', 'https://base-sepolia.drpc.org');
+    vi.stubEnv('OVERRIDE_RPC_8453', 'https://custom-base.example.com');
+    const result = getOverrideRpcUrlsFromEnv();
+    expect(result[84532]).toBe('https://base-sepolia.drpc.org');
+    expect(result[8453]).toBe('https://custom-base.example.com');
+  });
+
+  it('ignores non-numeric chain IDs', () => {
+    vi.stubEnv('OVERRIDE_RPC_abc', 'https://example.com');
+    const result = getOverrideRpcUrlsFromEnv();
+    expect(Object.keys(result)).toHaveLength(0);
+  });
+
+  it('ignores empty values', () => {
+    vi.stubEnv('OVERRIDE_RPC_1', '');
+    const result = getOverrideRpcUrlsFromEnv();
+    expect(result[1]).toBeUndefined();
+  });
+});
+
+describe('getSigningMode', () => {
+  it('returns readonly when no credentials are set', () => {
+    vi.stubEnv('PRIVATE_KEY', '');
+    expect(getSigningMode()).toBe('readonly');
+  });
+
+  it('returns privatekey when PRIVATE_KEY is set', () => {
+    vi.stubEnv('PRIVATE_KEY', '0xdeadbeef');
+    expect(getSigningMode()).toBe('privatekey');
+  });
+});
+
+describe('buildSdkConfig with privateKey and overrideRpcUrls', () => {
+  it('includes privateKey when provided', () => {
+    const config = buildSdkConfig({
+      chainId: 1,
+      rpcUrl: 'https://eth.llamarpc.com',
+      privateKey: '0xdeadbeef',
+    });
+    expect(config.privateKey).toBe('0xdeadbeef');
+  });
+
+  it('includes overrideRpcUrls when provided', () => {
+    const config = buildSdkConfig({
+      chainId: 1,
+      rpcUrl: 'https://eth.llamarpc.com',
+      overrideRpcUrls: { 84532: 'https://base-sepolia.drpc.org' },
+    });
+    expect(config.overrideRpcUrls).toEqual({ 84532: 'https://base-sepolia.drpc.org' });
+  });
+
+  it('omits privateKey and overrideRpcUrls when not provided', () => {
+    const config = buildSdkConfig({
+      chainId: 1,
+      rpcUrl: 'https://eth.llamarpc.com',
+    });
+    expect(config.privateKey).toBeUndefined();
+    expect(config.overrideRpcUrls).toBeUndefined();
+  });
+});
+
+describe('createSdk with privateKey', () => {
+  it('creates SDK with privateKey from env', () => {
+    vi.stubEnv('PRIVATE_KEY', '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
+    const sdk = createSdk({ chainId: 11155111, rpcUrl: 'https://rpc.sepolia.org' });
+    expect(sdk).toBeDefined();
+    expect(sdk.isReadOnly).toBe(false);
+  });
+
+  it('creates SDK with explicit privateKey (overrides env)', () => {
+    vi.stubEnv('PRIVATE_KEY', '');
+    const sdk = createSdk({
+      chainId: 11155111,
+      rpcUrl: 'https://rpc.sepolia.org',
+      privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+    });
+    expect(sdk).toBeDefined();
+    expect(sdk.isReadOnly).toBe(false);
   });
 });
 

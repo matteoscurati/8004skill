@@ -13,6 +13,7 @@ import {
   validateAgentId,
   createSdk,
   handleError,
+  isMainScript,
   outputJson,
   tryCatch,
   buildAgentDetails,
@@ -46,4 +47,6 @@ async function main() {
   outputJson(result);
 }
 
-main().catch(handleError);
+if (isMainScript(import.meta.url)) {
+  main().catch(handleError);
+}

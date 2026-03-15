@@ -1,6 +1,6 @@
 # Answer Examples — Extended
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.0, March 2026.
 
 Niche response templates. For common queries, see `answer-examples.md`.
 
@@ -93,4 +93,108 @@ Are you sure? This cannot be undone.
 
 [After explicit confirmation, execute transfer.ts]
 Transfer complete. Tx: 0xdef...456 (explorer link). New owner: `0xNewOwner`.
+```
+
+
+## "Send a message to agent 8453:42" (A2A Messaging)
+
+Structure: Load agent -> Verify A2A endpoint -> Send message -> Show response
+
+```
+[Execute: load-agent.ts to verify A2A endpoint exists]
+
+**Messaging**: Code Reviewer (`8453:42`)
+**A2A Endpoint**: https://a2a.example.com/agent-card
+
+Sending message...
+
+[Execute: agent.messageA2A() via SDK]
+
+**Task**: `task-abc123`
+**State**: completed
+
+**Response**:
+> I've reviewed your request. The contract at 0x1234... has 3 potential issues:
+> 1. Reentrancy in withdraw() — use ReentrancyGuard
+> 2. Unchecked return value on line 47
+> 3. Missing access control on setAdmin()
+
+Would you like to continue this conversation, start a new task, or leave feedback on this agent?
+```
+
+### A2A with payment required
+
+```
+[Execute: agent.messageA2A()]
+
+**Payment Required**: Agent `8453:42` charges for responses.
+
+**Payment Details**:
+- Amount: 0.10 USDC
+- Network: Base (8453)
+- Recipient: `0x5678...9ABC`
+
+Your maxAmount cap: 1.00 USDC ✅
+
+Approve payment?
+
+[After explicit confirmation, execute x402Payment.pay()]
+Payment confirmed. Tx: 0xpay...789 (explorer link).
+
+**Task**: `task-abc123`
+**State**: completed
+
+**Response**:
+> Analysis complete. See the detailed report above.
+
+Would you like to continue this task or start a new one?
+```
+
+
+## "Make an x402 request to https://agent.example.com/api/analyze" (X402 Payment)
+
+Structure: Make request -> Show 402 details -> Confirm -> Pay -> Show response
+
+```
+[Execute: sdk.request() with the provided URL]
+
+**X402 Payment Required**
+
+The endpoint requires payment to access.
+
+**Payment Options**:
+| Scheme | Network | Amount | Description |
+|--------|---------|--------|-------------|
+| exact | Base | 0.05 USDC | Code analysis endpoint |
+
+**Recipient**: `0xABC...DEF`
+
+Your maxAmount cap: 1.00 USDC ✅
+
+Approve payment?
+
+[After explicit confirmation, execute x402Payment.pay()]
+Payment confirmed. Tx: 0xpay...456 (explorer link). Amount: 0.05 USDC on Base.
+
+**Response** (200 OK):
+{
+  "analysis": "No critical vulnerabilities found.",
+  "warnings": 2,
+  "details": [...]
+}
+
+Would you like to make another request or inspect the transaction?
+```
+
+### Auto-pay (autonomous agent with PRIVATE_KEY)
+
+```
+[Execute: sdk.fetchWithX402() with maxAmount cap]
+
+Auto-paid 0.05 USDC on Base. Tx: 0xpay...456.
+
+**Response** (200 OK):
+{
+  "analysis": "No critical vulnerabilities found."
+}
 ```

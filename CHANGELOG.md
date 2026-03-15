@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-03-15
+
+### Added
+- **A2A Messaging** (Operation 14) — send messages to agents, list/get/cancel tasks via A2A protocol (`scripts/a2a.ts`)
+- **X402 Payment** (Operation 15) — execute HTTP requests with automatic x402 payment handling (`scripts/x402-pay.ts`)
+- `PRIVATE_KEY` env var support — headless/server-side signing alternative to WalletConnect for x402 payments and automated workflows
+- `OVERRIDE_RPC_{chainId}` env vars — per-chain RPC URL overrides (SDK 1.7.0 built-in defaults)
+- `getSigningMode()` helper — detect available signing method (walletconnect/privatekey/readonly)
+- `getOverrideRpcUrlsFromEnv()` helper — collect per-chain RPC overrides from environment
+- Example 6 in SKILL.md — A2A + x402 combined flow
+- 45 new unit tests (226 total)
+
+### Changed
+- Upgraded agent0-sdk from 1.6.0 to 1.7.0 (x402 payments, A2A messaging, multichain improvements)
+- SKILL.md expanded from 13 to 15 operations
+- `buildSdkConfig()` now accepts `privateKey` and `overrideRpcUrls` options
+- `createSdk()` reads `PRIVATE_KEY` and `OVERRIDE_RPC_*` from environment automatically
+- `check-env.ts` reports signing mode and `PRIVATE_KEY` presence
+- `connect.ts` fixed to use `isMainScript` guard pattern
+- Script version bumped to 2.3.0
+- All reference docs updated to v1.7.0
+- Website updated with 2 new operation cards and docs
+
 ## [2.2.0] - 2026-03-14
 
 ### Added

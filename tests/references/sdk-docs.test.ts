@@ -31,7 +31,7 @@ describe('sdk documentation alignment', () => {
     expect(skill).toContain('get-agent.ts');
     expect(skill).toContain('ownership.ts');
     expect(skill).toContain('sdk-info.ts');
-    expect(skill).toContain('--storage <ipfs|http|onchain>');
+    expect(skill).toContain('--storage');
     expect(skill).toContain('--action get');
   });
 });

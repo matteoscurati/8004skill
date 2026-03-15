@@ -1,12 +1,12 @@
 ---
 name: 8004skill
-description: Manage on-chain AI agents via ERC-8004 — register, search, load, update, inspect, transfer, give feedback, check reputation, set wallets, verify identity, and handle x402 payments across EVM chains. ALWAYS consult this skill when the user wants to register an agent on-chain, search or discover agents, check agent reputation or trust, give or revoke feedback, transfer agent ownership, manage agent wallets, verify agent identity, run "whoami", configure chain settings, check SDK diagnostics, or ask about x402 payment readiness. Also consult for any question about ERC-8004, the agent registry protocol, agent identity NFTs, on-chain reputation, OASF skills/domains, supported chains, or the Python agent0 SDK — even if they don't say "ERC-8004" explicitly. If the user mentions agent IDs like "11155111:42" or "8453:17", this skill is needed.
+description: Manage on-chain AI agents via ERC-8004 — register, search, load, update, inspect, transfer, give feedback, check reputation, set wallets, verify identity, send A2A messages, execute x402 payments, and handle agent-to-agent workflows across EVM chains. ALWAYS consult this skill when the user wants to register an agent on-chain, search or discover agents, check agent reputation or trust, give or revoke feedback, transfer agent ownership, manage agent wallets, verify agent identity, run "whoami", configure chain settings, check SDK diagnostics, send messages to agents, manage A2A tasks, make x402 payments, or ask about x402 payment readiness. Also consult for any question about ERC-8004, the agent registry protocol, agent identity NFTs, on-chain reputation, OASF skills/domains, supported chains, A2A messaging, x402 payments, or the Python agent0 SDK — even if they don't say "ERC-8004" explicitly. If the user mentions agent IDs like "11155111:42" or "8453:17", this skill is needed.
 license: GPL-3.0
 allowed-tools: "Bash(npx:*) Bash(npm:*) Bash(mkdir:*) Bash(chmod:*) Read"
 compatibility: Requires Node.js 22+, macOS or Linux. Scripts executed via npx tsx.
 metadata:
   author: matteoscurati
-  version: "2.2.0"
+  version: "2.3.0"
   npm:
     package: 8004skill
     postInstall: npm install --omit=dev
@@ -28,7 +28,7 @@ metadata:
 
 ERC-8004 defines three registries on EVM chains: **Identity** (ERC-721 NFTs with IPFS/HTTP metadata), **Reputation** (on-chain feedback), and **Validation** (third-party attestations). Agent ID format: `{chainId}:{tokenId}`.
 
-In the current public `agent0-sdk` package (`1.6.0`), Identity + Reputation flows are operational. Validation remains reference-only until the SDK exposes public request/response wrappers.
+In the current public `agent0-sdk` package (`1.7.0`), Identity + Reputation flows are operational, and native x402 payment handling and A2A messaging are supported. Validation remains reference-only until the SDK exposes public request/response wrappers.
 
 ### Reference Map
 
@@ -60,7 +60,7 @@ Read files on demand — one concept per file, lazy-loaded by area.
 Before entering the Operations Menu, classify the user's request:
 
 1. **Knowledge query** ("what is…", "how does…") → Read the relevant reference file, answer directly. No script needed.
-2. **Action request** (register, search, update, feedback, ownership, diagnostics) → Operations Menu below.
+2. **Action request** (register, search, update, feedback, ownership, diagnostics, message agent, pay agent) → Operations Menu below.
 3. **Troubleshooting** (error, help, something broke) → `troubleshooting.md`.
 4. **Multi-step workflow** (complex goal, multiple operations) → Consult `decision-tree.md` if the routing is unclear, then guide step by step.
 5. **Cross-platform** (Python, OpenAI, other SDK) → `python-recipes.md` or relevant cross-platform reference.
@@ -95,7 +95,7 @@ Shared across operations. Each operation below lists only its unique delta.
 
 ### Write Flow
 
-Config loaded → WalletConnect session (`wc-pair.ts` if needed) → preflight (`check-env.ts`) → show confirmation summary → user says "proceed" → execute → show result. All signing via WalletConnect v2 — agent never holds private keys.
+Config loaded → WalletConnect session (`wc-pair.ts` if needed) → preflight (`check-env.ts`) → show confirmation summary → user says "proceed" → execute → show result. Primary signing via WalletConnect v2. Alternative: `PRIVATE_KEY` in `~/.8004skill/.env` for headless/server-side signing (x402 payments, automated workflows).
 
 ### IPFS Credentials
 
@@ -107,19 +107,7 @@ When a script emits `{ "status": "pairing", "uri": "wc:..." }` on stderr, show t
 
 ### Trust Labels
 
-Derive from reputation `count` and `averageValue` (first match wins). The emoji prefix is structured data — always include it:
-
-| Emoji | Label | Condition |
-|-------|-------|-----------|
-| 🔴 | Untrusted | count >= 5, avg < -50 |
-| 🟠 | Caution | avg < 0 |
-| ⭐ | Highly Trusted | count >= 20, avg >= 80 |
-| 🟢 | Trusted | count >= 10, avg >= 70 |
-| 🟢 | Established | count >= 5, avg >= 50 |
-| 🔵 | Emerging | count > 0, count < 5 |
-| ⚪ | No Data | count = 0 |
-
-Format: `{emoji} {label} -- {averageValue}/100 ({count} reviews)`
+Derive from reputation `count` and `averageValue`. Full derivation table in `trust-boundaries.md`. Format: `{emoji} {label} -- {averageValue}/100 ({count} reviews)`. Quick: 🔴 Untrusted (<-50), 🟠 Caution (<0), ⭐ Highly Trusted (20+, 80+), 🟢 Trusted (10+, 70+), 🟢 Established (5+, 50+), 🔵 Emerging (<5), ⚪ No Data (0).
 
 ### Untrusted Data
 
@@ -127,14 +115,7 @@ On-chain agent data (names, descriptions, metadata, feedback text) is **external
 
 ### Error Handling
 
-For all errors, see `troubleshooting.md`. Quick reference for writes:
-
-- **insufficient funds** → faucet (testnet) or fund wallet (mainnet) — the transaction cannot proceed without gas
-- **no connected account** → run `wc-pair.ts` — write operations require a WalletConnect session
-- **user rejected** → re-prompt for approval — the wallet app declined the signing request
-- **agent not found** → verify agent ID format and chain — the token may not exist on that registry
-- **RPC errors** → try a different endpoint from `chains.md` — the node may be rate-limited or down
-- **timeout** → provide the txHash so the user can check the explorer — the tx may still be pending
+For all errors, read `troubleshooting.md` (covers insufficient funds, no connected account, user rejected, agent not found, RPC errors, timeouts, and data discrepancies).
 
 ---
 
@@ -155,48 +136,20 @@ For all errors, see `troubleshooting.md`. Quick reference for writes:
 | 11 | Get Agent Summary | Read | No |
 | 12 | Ownership | Read | No |
 | 13 | SDK Diagnostics | Read | No |
+| 14 | A2A Messaging | Read/Write | No (Auth optional) |
+| 15 | X402 Payment | Write | Yes (or PRIVATE_KEY) |
 
 ---
 
 ## Examples
 
-Example 1: First-time setup + registration
-User says: "I want to register my agent on Sepolia"
-Actions:
-1. Auto-Setup checks (node_modules, config dir)
-2. No config found → trigger Configure (Operation 1): ask chain, RPC, IPFS, pair wallet
-3. Run Register Agent (Operation 2): gather name, description, endpoints step by step
-4. Show confirmation summary → user approves → submit transaction
-Result: Agent registered with ID `11155111:<tokenId>`, txHash linked to explorer
+Example 1: First-time registration — "Register my agent on Sepolia" → Auto-Setup → Configure (Op 1, chain+RPC+IPFS+wallet) → Register (Op 2, gather info step by step) → confirm → submit → agent ID `11155111:<tokenId>` + txHash.
 
-Example 2: Discovery workflow
-User says: "Find agents that do code review"
-Actions:
-1. Chain Resolution → ask which chain (or use `--chains all`)
-2. Run Search Agents (Operation 4) with `--keyword "code review"`
-Result: Table of matching agents with ID, Name, MCP, A2A, Description. Offer to load details or check reputation.
+Example 2: Discovery — "Find code review agents" → Chain Resolution → Search (Op 4, `--keyword "code review"`) → table of results → offer load/reputation.
 
-Example 3: Reputation check
-User says: "Is agent 11155111:42 trustworthy?"
-Actions:
-1. Run Inspect Agent (Operation 6): `reputation.ts` + `connect.ts`
-Result: Trust label (e.g., "🟢 Trusted -- 85/100 (12 reviews)"), recent feedback table, endpoints.
+Example 3: Write flow — "Give 5 stars to 8453:17" → chain 8453 from prefix → WC session → preflight → Feedback (Op 5, 5★=100) → confirm summary → user approves in wallet → txHash.
 
-Example 4: Knowledge query
-User says: "What is the Identity Registry?"
-Actions:
-1. Classify as knowledge query → read `references/erc-8004-spec.md`
-Result: Direct answer explaining the ERC-721-based Identity Registry, no script needed.
-
-Example 5: Write flow with wallet signing
-User says: "Give 5 stars to agent 8453:17"
-Actions:
-1. Chain Resolution → chain 8453 (Base Mainnet) from agent ID prefix
-2. Write Flow: load config → check WC session (pair if needed) → preflight
-3. Run Give Feedback (Operation 5): convert 5 stars to value 100, ask for optional tags and text
-4. Show confirmation summary (Target: 8453:17, Rating: 100, Signer: 0x..., Chain: Base)
-5. User says "proceed" → submit transaction → user approves in wallet app
-Result: txHash (explorer link), reviewer address, rating, tags.
+Example 4: A2A + x402 — "Message agent 8453:42 for code review" → chain 8453 → A2A Send (Op 14) → if 402 → show payment details → approve → X402 Pay (Op 15) → retry message → response.
 
 ---
 
@@ -218,20 +171,11 @@ Pair wallet if write ops planned: `npx tsx {baseDir}/scripts/wc-pair.ts --chain-
 
 **Triggers**: "register agent", "create agent", "mint agent NFT". Write flow. IPFS credentials only for `--storage ipfs`.
 
-> Best practices: [Registration.md](https://github.com/erc-8004/best-practices/blob/main/Registration.md). Golden Rules: (1) clear name + detailed description; (2) at least one endpoint; (3) OASF skills/domains; (4) ERC-8004 registration details. OASF taxonomy: [agntcy/oasf](https://github.com/agntcy/oasf).
-
-**Input** (step by step): name, description, storage (ipfs/http/onchain), MCP endpoint, A2A endpoint, image URL, active (default: true), OASF skills/domains, x402 (default: false).
+**Input** (step by step): name, description, storage (ipfs/http/onchain), MCP endpoint, A2A endpoint, image URL, active (default: true), OASF skills/domains, x402 (default: false). Best practices: [Registration.md](https://github.com/erc-8004/best-practices/blob/main/Registration.md), OASF: [agntcy/oasf](https://github.com/agntcy/oasf).
 
 **Confirm**: Chain, Signer, Name, Description, endpoints, OASF, x402, storage, est. gas (~150k, higher for onchain).
 
-```
-npx tsx {baseDir}/scripts/register.ts \
-  --chain-id <id> --rpc-url <url> --name "<name>" --description "<desc>" \
-  --storage <ipfs|http|onchain> [--ipfs <provider>] [--http-uri <uri>] \
-  [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--active true|false] \
-  [--image <url>] [--skills "s1,s2"] [--domains "d1,d2"] \
-  [--validate-oasf true|false] [--x402 true]
-```
+Script: `register.ts` — Required: `--chain-id`, `--rpc-url`, `--name`, `--description`, `--storage`. Optional: `--ipfs`, `--http-uri`, `--mcp-endpoint`, `--a2a-endpoint`, `--active`, `--image`, `--skills`, `--domains`, `--validate-oasf`, `--x402`.
 
 **Result**: agentId (`{chainId}:{tokenId}`), txHash (explorer link), metadata URI. Save to config `registrations.<chainId>`.
 
@@ -261,30 +205,13 @@ Result: `AgentSummary[]` table (#, Agent ID, Name, MCP, A2A, Description). Offer
 
 ## Operation 5: Give Feedback
 
-**Triggers**: "give feedback", "rate agent", "review agent". Write flow.
+**Triggers**: "give feedback", "rate agent", "review agent". Write flow. Best practices: [Reputation.md](https://github.com/erc-8004/best-practices/blob/main/Reputation.md). Star-to-scale: 1★=20…5★=100; negative values below 0. Tags: starred, reachable, uptime, successRate, responseTime, revenues, tradingYield.
 
-> Best practices: [Reputation.md](https://github.com/erc-8004/best-practices/blob/main/Reputation.md). Tags: starred, reachable, uptime, successRate, responseTime, revenues, tradingYield. Star-to-scale: 1★=20…5★=100; negative values below 0.
+**Input**: Agent ID, rating (-100 to 100), tags (up to 2), endpoint. Optional off-chain fields (require `--ipfs`): text, mcp-tool/prompt/resource, a2a-skills/context-id/task-id, oasf-skills/domains, proof-of-payment-json.
 
-**Input**: Agent ID, rating (-100 to 100, decimals OK), tags (up to 2), endpoint. Optional off-chain fields (require `--ipfs <provider>`): text, mcp-tool/prompt/resource, a2a-skills/context-id/task-id, oasf-skills/domains, proof-of-payment-json.
+Script: `feedback.ts` — Required: `--agent-id`, `--chain-id`, `--rpc-url`, `--value`. Optional: `--tag1`, `--tag2`, `--endpoint`, `--ipfs`, `--text`, `--mcp-tool`, `--mcp-prompt`, `--mcp-resource`, `--a2a-skills`, `--a2a-context-id`, `--a2a-task-id`, `--oasf-skills`, `--oasf-domains`, `--proof-of-payment-json`.
 
-**Confirm**: Target Agent, Rating, Tags, Endpoint, off-chain fields, Signer, Chain.
-
-```
-npx tsx {baseDir}/scripts/feedback.ts \
-  --agent-id <id> --chain-id <chainId> --rpc-url <url> --value <val> \
-  [--tag1 <t>] [--tag2 <t>] [--endpoint <url>] [--ipfs <provider>] \
-  [--text "<text>"] [--mcp-tool <t>] [--mcp-prompt <p>] [--mcp-resource <r>] \
-  [--a2a-skills "s1,s2"] [--a2a-context-id <id>] [--a2a-task-id <id>] \
-  [--oasf-skills "s1,s2"] [--oasf-domains "d1,d2"] \
-  [--proof-of-payment-json '{"k":"v"}']
-```
-
-**Result**: txHash, reviewer, rating, tags.
-
-**Sub-actions**:
-- **Get**: `npx tsx {baseDir}/scripts/feedback.ts --action get --agent-id <id> --client-address <addr> --feedback-index <i> --chain-id <chainId> --rpc-url <url>`
-- **Revoke** (write flow, confirm): `npx tsx {baseDir}/scripts/feedback.ts --action revoke --agent-id <id> --chain-id <chainId> --rpc-url <url> --feedback-index <i>`
-- **Respond** (write flow, confirm): `npx tsx {baseDir}/scripts/respond-feedback.ts --agent-id <id> --client-address <addr> --feedback-index <i> --response-uri <uri> --response-hash <hash> --chain-id <chainId> --rpc-url <url>`
+**Sub-actions**: Get (`feedback.ts --action get --agent-id --client-address --feedback-index`), Revoke (`feedback.ts --action revoke --agent-id --feedback-index`, write flow), Respond (`respond-feedback.ts --agent-id --client-address --feedback-index --response-uri --response-hash`, write flow).
 
 ---
 
@@ -292,16 +219,11 @@ npx tsx {baseDir}/scripts/feedback.ts \
 
 **Triggers**: "check reputation", "inspect agent", "how good is agent X", "x402 status".
 
-```
-npx tsx {baseDir}/scripts/connect.ts --agent-id <id> --chain-id <chainId> --rpc-url <url>
-npx tsx {baseDir}/scripts/reputation.ts --agent-id <id> --chain-id <chainId> --rpc-url <url> \
-  [--tags "t1,t2"] [--capabilities "c"] [--skills "s"] [--tasks "t"] [--names "n"] \
-  [--include-revoked true] [--min-value N] [--max-value N]
-```
+Scripts: `connect.ts` + `reputation.ts` — both take `--agent-id`, `--chain-id`, `--rpc-url`. Reputation filters: `--tags`, `--capabilities`, `--skills`, `--tasks`, `--names`, `--include-revoked`, `--min-value`, `--max-value`.
 
-Show: agent name/ID, active, trust label, recent feedback table (Reviewer, Rating, Tags, Text), OASF, endpoints. If MCP: URL, tools, config snippet. If A2A: agent card URL, skills.
+Show: agent name/ID, active, trust label, recent feedback table, OASF, endpoints. If MCP: URL, tools. If A2A: agent card, skills (offer Op 14). If x402: payment readiness (offer Op 15).
 
-**X402 status**: `npx tsx {baseDir}/scripts/x402-status.ts --agent-id <id> --chain-id <chainId> --rpc-url <url>`. Shows: x402 enabled, payment readiness (wallet + active + endpoints), wallet, monetizable endpoints, awal CLI commands. See `x402-integration.md`.
+**X402 status**: `x402-status.ts --agent-id --chain-id --rpc-url`. See `x402-integration.md`.
 
 ---
 
@@ -345,18 +267,7 @@ Card: Agent (name+ID), Status, Trust (label), Wallet, Owners, Endpoints (MCP/A2A
 
 Input: Agent ID + fields to change. Show old → new. Choose storage mode (ipfs/http/onchain). IPFS credentials only for `--storage ipfs`.
 
-```
-npx tsx {baseDir}/scripts/update-agent.ts \
-  --agent-id <id> --chain-id <chainId> --rpc-url <url> --storage <mode> [--ipfs <p>] \
-  [--name "<n>"] [--description "<d>"] [--image <url>] \
-  [--mcp-endpoint <url>] [--a2a-endpoint <url>] [--ens-endpoint <name.eth>] [--active true|false] \
-  [--remove-mcp] [--remove-a2a] [--remove-ens] \
-  [--remove-endpoint-type <mcp|a2a|ens|did|wallet|oasf>] [--remove-endpoint-value <val>] [--remove-all-endpoints true] \
-  [--trust "reputation,crypto-economic,tee-attestation"] \
-  [--skills "s1,s2"] [--domains "d1,d2"] [--remove-skills "s1"] [--remove-domains "d1"] \
-  [--validate-oasf true|false] [--x402 true|false] \
-  [--metadata '{"k":"v"}'] [--del-metadata "k1,k2"] [--http-uri <uri>]
-```
+Script: `update-agent.ts` — Required: `--agent-id`, `--chain-id`, `--rpc-url`, `--storage`. Optional: `--ipfs`, `--name`, `--description`, `--image`, `--mcp-endpoint`, `--a2a-endpoint`, `--ens-endpoint`, `--active`, `--remove-mcp`, `--remove-a2a`, `--remove-ens`, `--remove-endpoint-type`, `--remove-endpoint-value`, `--remove-all-endpoints`, `--trust`, `--skills`, `--domains`, `--remove-skills`, `--remove-domains`, `--validate-oasf`, `--x402`, `--metadata`, `--del-metadata`, `--http-uri`.
 
 ---
 
@@ -372,29 +283,32 @@ Result: txHash, agentId, new owner.
 
 ---
 
-## Operation 11: Get Agent Summary
+## Operations 11-13: Utility (Read-only)
 
-**Triggers**: "get agent summary", "fetch indexed agent".
-
-`npx tsx {baseDir}/scripts/get-agent.ts --agent-id <id> --chain-id <chainId> --rpc-url <url>`
-
-Returns indexed `AgentSummary` view (lighter than `load-agent.ts`).
+- **Get Agent Summary** (Op 11, "get summary", "fetch indexed agent"): `get-agent.ts --agent-id --chain-id --rpc-url`. Returns indexed `AgentSummary` (lighter than `load-agent.ts`).
+- **Ownership** (Op 12, "who owns", "check ownership"): `ownership.ts --action get-owner|is-owner --agent-id --chain-id --rpc-url [--address]`.
+- **SDK Diagnostics** (Op 13, "sdk info", "registry addresses"): `sdk-info.ts --chain-id --rpc-url [--subgraph-chain-id]`. Shows registry map, read-only status, client availability.
 
 ---
 
-## Operation 12: Ownership
+## Operation 14: A2A Messaging
 
-**Triggers**: "who owns this agent", "check ownership".
+**Triggers**: "message agent", "send A2A", "talk to agent", "list tasks", "check task", "cancel task".
 
-- **Get owner**: `npx tsx {baseDir}/scripts/ownership.ts --action get-owner --agent-id <id> --chain-id <chainId> --rpc-url <url>`
-- **Check owner**: `npx tsx {baseDir}/scripts/ownership.ts --action is-owner --agent-id <id> --address <addr> --chain-id <chainId> --rpc-url <url>`
+Agent-to-agent messaging via the A2A protocol. The target agent must have an A2A endpoint registered. A2A is HTTP-level — no on-chain transaction needed unless the endpoint returns HTTP 402 (payment required).
+
+Script: `a2a.ts` — Required: `--action`, `--agent-id`, `--chain-id`, `--rpc-url`. Optional: `--message` (send), `--task-id` (get/cancel), `--credential`, `--context-id`, `--blocking`.
+
+**Actions**: `send` (message text → response or task creation), `list-tasks` (task summaries), `get-task` (task status + artifacts), `cancel-task` (cancellation). If send returns 402 → show payment details, link to Operation 15. Pass `--credential <api-key>` for authenticated A2A endpoints.
 
 ---
 
-## Operation 13: SDK Diagnostics
+## Operation 15: X402 Payment
 
-**Triggers**: "sdk info", "registry addresses", "diagnose chain setup".
+**Triggers**: "pay agent", "x402 request", "call paid endpoint", "make payment", "HTTP 402".
 
-`npx tsx {baseDir}/scripts/sdk-info.ts --chain-id <chainId> --rpc-url <url> [--subgraph-chain-id <id>]`
+Execute HTTP requests with automatic x402 payment handling. Requires signing capability (WalletConnect session or `PRIVATE_KEY` in `~/.8004skill/.env`).
 
-Shows: chain ID, registry map, direct registry getters, read-only status, chain/IPFS/subgraph client availability, probed subgraph status.
+Script: `x402-pay.ts` — Required: `--url`, `--chain-id`, `--rpc-url`. Optional: `--method` (GET|POST), `--body`, `--auto-pay`, `--max-amount` (USD safety cap).
+
+**Flow**: Request endpoint → if 2xx return response → if 402 display payment details (amount, token, chain, recipient) → if `--auto-pay` pay within `--max-amount` cap → else output details for user review. Always confirm before payment: Amount, Recipient, Chain, Signing method (WC or PRIVATE_KEY).

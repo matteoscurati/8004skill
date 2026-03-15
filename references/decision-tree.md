@@ -1,6 +1,6 @@
 # Decision Tree
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.0, March 2026.
 
 When a user's intent is unclear, use this tree to route them to the right operation or reference.
 
@@ -30,6 +30,16 @@ When a user's intent is unclear, use this tree to route them to the right operat
 - "I want to verify another agent" → Operation 8 (Verify Identity — verify)
 - "I want to see my agent's profile" → Operation 9 (Whoami)
 - "I want to transfer my agent" → Operation 10 (Transfer Agent) — irreversible!
+
+## Message & Pay Agents
+
+- "I want to message/talk to an agent" → Operation 14 (A2A Messaging). Requires the target agent to have an A2A endpoint.
+- "I want to send a message to agent X" → Operation 14 (A2A Messaging)
+- "I want to chat with another agent" → Operation 14 (A2A Messaging)
+- "I want to pay an agent" → Operation 15 (X402 Payment). Use `sdk.request()` for manual flow or `sdk.fetchWithX402()` for auto-pay.
+- "I want to make an x402 request" → Operation 15 (X402 Payment)
+- "I want to call a paid endpoint" → Operation 15 (X402 Payment)
+- "I want to make a payment" → Operation 15 (X402 Payment). For on-chain payments to agent endpoints.
 
 ## Understand the Protocol
 

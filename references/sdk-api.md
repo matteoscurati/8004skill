@@ -1,6 +1,6 @@
 # agent0-sdk API Reference
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.0, March 2026.
 
 ## SDK Class
 
@@ -9,8 +9,10 @@ import { SDK } from 'agent0-sdk';
 
 const sdk = new SDK({
   chainId: number,           // Required: EVM chain ID
-  rpcUrl: string,            // Required: RPC endpoint
+  rpcUrl?: string,           // RPC endpoint (optional when SDK has built-in defaults for the chain)
+  privateKey?: string,       // Private key for signing (alternative to WalletConnect)
   walletProvider?: EIP1193Provider,  // EIP-1193 provider (WalletConnect)
+  overrideRpcUrls?: Record<number, string>,  // Override RPC URLs per chain (used by cross-chain loadAgent)
   ipfs?: 'pinata' | 'filecoinPin' | 'node' | 'helia',
   pinataJwt?: string, filecoinPrivateKey?: string, ipfsNodeUrl?: string,
   subgraphUrl?: string, subgraphOverrides?: Record<number, string>,
@@ -58,6 +60,20 @@ sdk.getReputationSummary(agentId, tag1?, tag2?): Promise<{ count: number, averag
 sdk.transferAgent(agentId, newOwner): Promise<TransactionHandle<{ txHash: string; from: Address; to: Address; agentId: AgentId }>>
 sdk.isAgentOwner(agentId, address): Promise<boolean>
 sdk.getAgentOwner(agentId): Promise<Address>
+
+// X402 Payment Handling (v1.7.0+)
+sdk.request(url: string, options?: X402RequestOptions): Promise<X402RequestResult>
+  // Makes HTTP request with built-in 402 handling.
+  // Returns { x402Required: false, response: Response } on success,
+  //   or { x402Required: true, x402Payment: X402Payment } on HTTP 402.
+sdk.fetchWithX402(url: string, options?: X402RequestOptions): Promise<Response>
+  // Like sdk.request() but auto-pays on 402 and returns the unlocked response.
+  // Requires privateKey or walletProvider for signing.
+
+// A2A Client Factory (v1.7.0+)
+sdk.createA2AClient(agentId: string): Promise<A2AClient>
+  // Creates an A2A client for messaging the specified agent.
+  // Fetches the agent's A2A endpoint and agent card automatically.
 ```
 
 ## Agent Class
@@ -81,6 +97,32 @@ sdk.getAgentOwner(agentId): Promise<Address>
 //   all return TransactionHandle<RegistrationFile>
 // Ownership: transfer(newOwner) — returns TransactionHandle
 // Data: getRegistrationFile(), getMetadata()
+
+// A2A Messaging (v1.7.0+)
+agent.messageA2A(message: string, options?: MessageA2AOptions): Promise<MessageResponse>
+  // Send a message to the agent's A2A endpoint. Returns task state + response parts.
+agent.message(message: string, options?: MessageA2AOptions): Promise<MessageResponse>
+  // Alias for messageA2A().
+agent.listTasks(options?: ListTasksOptions): Promise<TaskSummary[]>
+  // List tasks for this agent (optionally filtered by state, limit, offset).
+agent.loadTask(taskId: string, options?: LoadTaskOptions): Promise<AgentTask>
+  // Load a specific task by ID. Returns an AgentTask with query/message/cancel methods.
+```
+
+## AgentTask
+
+Returned by `agent.loadTask()`. Represents an ongoing A2A task.
+
+```typescript
+const task = await agent.loadTask(taskId);
+
+task.id: string              // Task ID
+task.state: TaskState        // 'submitted' | 'working' | 'input-required' | 'completed' | 'canceled' | 'failed'
+task.parts: Part[]           // Response parts (text, data, file)
+
+task.query(): Promise<TaskResponse>       // Poll the task for updated state and parts
+task.message(text: string): Promise<TaskResponse>  // Send a follow-up message to the task
+task.cancel(): Promise<TaskResponse>      // Cancel the task
 ```
 
 ## TransactionHandle
@@ -148,7 +190,15 @@ Maps each public method to the skill script that uses it.
 | `Agent.setAgentURI()` | `scripts/update-agent.ts --storage http` |
 | `Agent.transfer()` | Covered by `scripts/transfer.ts` via `SDK.transferAgent()` |
 
-Validation registry request/response flows remain reference-only because the public `SDK` package does not yet expose validation helpers in `v1.6.0`. See `validation-registry.md`.
+| `SDK.request()` | `scripts/x402-status.ts` (readiness check) |
+| `SDK.fetchWithX402()` | Not yet wrapped by a skill script |
+| `SDK.createA2AClient()` | Not yet wrapped by a skill script |
+| `Agent.messageA2A()` | Not yet wrapped by a skill script |
+| `Agent.message()` | Alias for `Agent.messageA2A()` |
+| `Agent.listTasks()` | Not yet wrapped by a skill script |
+| `Agent.loadTask()` | Not yet wrapped by a skill script |
+
+Validation registry request/response flows remain reference-only because the public `SDK` package does not yet expose validation helpers in `v1.7.0`. See `validation-registry.md`.
 
 ## Related References
 

@@ -1,18 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { buildSearchFilters } from '../../scripts/lib/filters.js';
+import { setupCliSpies } from '../helpers/cli-spies.js';
 
-let exitSpy: ReturnType<typeof vi.spyOn>;
-
-beforeEach(() => {
-  exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
-    throw new Error(`process.exit(${code})`);
-  });
-  vi.spyOn(console, 'error').mockImplementation(() => {});
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+setupCliSpies();
 
 describe('buildSearchFilters', () => {
   it('returns empty filters and options for empty args', () => {
