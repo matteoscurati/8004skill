@@ -1,6 +1,6 @@
 # Troubleshooting
 
-> As of agent0-sdk v1.7.0, March 2026.
+> As of agent0-sdk v1.7.1, March 2026.
 
 Common errors and their solutions, organized by category.
 

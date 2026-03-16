@@ -28,7 +28,7 @@ metadata:
 
 ERC-8004 defines three registries on EVM chains: **Identity** (ERC-721 NFTs with IPFS/HTTP metadata), **Reputation** (on-chain feedback), and **Validation** (third-party attestations). Agent ID format: `{chainId}:{tokenId}`.
 
-In the current public `agent0-sdk` package (`1.7.0`), Identity + Reputation flows are operational, and native x402 payment handling and A2A messaging are supported. Validation remains reference-only until the SDK exposes public request/response wrappers.
+In the current public `agent0-sdk` package (`1.7.1`), Identity + Reputation flows are operational, and native x402 payment handling and A2A messaging are supported. Validation remains reference-only until the SDK exposes public request/response wrappers.
 
 ### Reference Map
 

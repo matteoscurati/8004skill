@@ -1,6 +1,6 @@
 # Answer Examples
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.1, March 2026.
 
 Model responses for common queries. For niche queries (whoami, update, x402, transfer), see `answer-examples-extended.md`.
 
@@ -16,7 +16,7 @@ ERC-8004 defines three on-chain registries for AI agents on EVM chains:
 - **Reputation Registry**: On-chain feedback (-100 to 100) with tags and optional text.
 - **Validation Registry**: Third-party attestations from designated validators.
 
-Agents are identified by `{chainId}:{tokenId}`. Contracts deployed at deterministic addresses across 18+ chains via CREATE2.
+Agents are identified by `{chainId}:{tokenId}`. Contracts deployed at deterministic addresses across 25 chains via CREATE2.
 
 Live on 5 fully-indexed chains (Ethereum, Sepolia, Polygon, Base, Base Sepolia) with additional deployed chains via manual config. See `chains.md`.
 ```

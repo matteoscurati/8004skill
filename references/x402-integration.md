@@ -1,6 +1,6 @@
 # X402 Payment Integration
 
-> As of agent0-sdk v1.7.0, March 2026.
+> As of agent0-sdk v1.7.1, March 2026.
 
 ## What is X402?
 
@@ -38,6 +38,14 @@ Check with: `npx tsx scripts/x402-status.ts --agent-id <id> --chain-id <chainId>
 | `npx awal x402 pay <url>` | Pay and call an x402 endpoint |
 | `npx awal x402 bazaar search "<query>"` | Discover monetized agents |
 | `npm install express x402-express` | Add x402 paywall to your own endpoint |
+
+## Chain Name Handling (v1.7.1)
+
+v1.7.1 improved x402 chain name normalization. Servers may send `network` values in different formats:
+- **v1 format**: human-readable slugs like `"base-sepolia"`, `"ethereum-mainnet"`, `"avalanche"`
+- **v2 format**: CAIP-2 identifiers like `"eip155:84532"`, `"eip155:1"`, `"eip155:43114"`
+
+The SDK now normalizes both formats correctly, mapping between them as needed. The v2 payload also includes explicit `scheme` (e.g. `"exact"`) and `network` fields for improved server-side validation.
 
 ## SDK Payment Execution (v1.7.0+)
 

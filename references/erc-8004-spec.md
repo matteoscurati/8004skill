@@ -1,6 +1,6 @@
 # ERC-8004 Protocol Specification
 
-> As of agent0-sdk v1.6.0, March 2026. For contract ABI and events, see `erc-8004-contracts.md`. For SDK wrapper methods, see `sdk-api.md`. For data types, see `sdk-types.md`.
+> As of agent0-sdk v1.7.1, March 2026. For contract ABI and events, see `erc-8004-contracts.md`. For SDK wrapper methods, see `sdk-api.md`. For data types, see `sdk-types.md`.
 
 ## Overview
 

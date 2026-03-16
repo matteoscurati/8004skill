@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-8004skill is a Claude Code skill for the ERC-8004 on-chain agent economy protocol. It provides a conversational wizard interface (defined in SKILL.md) that runs TypeScript CLI scripts to register agents, discover peers, manage reputation, send A2A messages, execute x402 payments, and enable agent-to-agent interactions across EVM chains. The current workspace targets the `agent0-sdk` v1.7.0 API surface (this repo links to the local `agent0-ts` source during development). Primary signing via WalletConnect v2; `PRIVATE_KEY` env var available for headless/server-side signing.
+8004skill is a Claude Code skill for the ERC-8004 on-chain agent economy protocol. It provides a conversational wizard interface (defined in SKILL.md) that runs TypeScript CLI scripts to register agents, discover peers, manage reputation, send A2A messages, execute x402 payments, and enable agent-to-agent interactions across EVM chains. The current workspace targets the `agent0-sdk` v1.7.1 API surface (this repo links to the local `agent0-ts` source during development). Primary signing via WalletConnect v2; `PRIVATE_KEY` env var available for headless/server-side signing.
 
 ## Distribution
 

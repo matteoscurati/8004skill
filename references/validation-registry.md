@@ -1,6 +1,6 @@
 # Validation Registry
 
-> As of agent0-sdk v1.6.0, March 2026. Contract support exists, but the public `SDK` class still does not expose validation request/response helpers.
+> As of agent0-sdk v1.7.1, March 2026. Contract support exists, but the public `SDK` class still does not expose validation request/response helpers.
 
 ## Purpose
 
@@ -48,7 +48,7 @@ ValidationStatus {
 
 ## Current SDK Support
 
-As of v1.6.0, the public `agent0-sdk` package exposes `sdk.validationRegistryAddress()` but does not expose validation request/response/read wrappers on `SDK`. To interact with validation today:
+As of v1.7.1, the public `agent0-sdk` package exposes `sdk.validationRegistryAddress()` but does not expose validation request/response/read wrappers on `SDK`. To interact with validation today:
 
 - Use the contract ABI directly via viem/ethers against the deployed addresses
 - Provide a `REGISTRY_ADDRESS_VALIDATION` override when working on chains where the validation registry is deployed

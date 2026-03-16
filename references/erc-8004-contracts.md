@@ -1,6 +1,6 @@
 # ERC-8004 Contract Interfaces
 
-> As of agent0-sdk v1.6.0, March 2026. For protocol overview, see `erc-8004-spec.md`.
+> As of agent0-sdk v1.7.1, March 2026. For protocol overview, see `erc-8004-spec.md`.
 
 ## Identity Registry
 

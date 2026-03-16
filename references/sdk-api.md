@@ -1,6 +1,6 @@
 # agent0-sdk API Reference
 
-> As of agent0-sdk v1.7.0, March 2026.
+> As of agent0-sdk v1.7.1, March 2026.
 
 ## SDK Class
 
@@ -209,7 +209,7 @@ Maps each public method to the skill script that uses it.
 | `Agent.listTasks()` | Covered by `a2a.ts` via `listTasks` |
 | `Agent.loadTask()` | Covered by `a2a.ts` via `loadTask` / `getTask` + `createTaskHandle` |
 
-Validation registry request/response flows remain reference-only because the public `SDK` package does not yet expose validation helpers in `v1.7.0`. See `validation-registry.md`.
+Validation registry request/response flows remain reference-only because the public `SDK` package does not yet expose validation helpers in `v1.7.1`. See `validation-registry.md`.
 
 ## Related References
 

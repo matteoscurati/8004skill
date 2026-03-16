@@ -1,6 +1,6 @@
 # Trust Boundaries
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.1, March 2026.
 
 Understanding what to trust, what to verify, and what to flag.
 
@@ -14,7 +14,7 @@ Three models an agent can declare (stored in the registration file `trustModels`
 | `crypto-economic` | Economic staking/bonding with slashing for misbehavior | Strong — financial penalty for bad behavior |
 | `tee-attestation` | Trusted Execution Environment hardware attestation | Strong — hardware-backed integrity proof |
 
-Most agents currently declare only `reputation`. The other models are available in the protocol but have limited real-world adoption as of v1.6.0.
+Most agents currently declare only `reputation`. The other models are available in the protocol but have limited real-world adoption as of v1.7.1.
 
 ## Trust Label Derivation
 

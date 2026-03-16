@@ -1,6 +1,6 @@
 # Decision Tree
 
-> As of agent0-sdk v1.7.0, March 2026.
+> As of agent0-sdk v1.7.1, March 2026.
 
 When a user's intent is unclear, use this tree to route them to the right operation or reference.
 

@@ -1,6 +1,6 @@
 # Python SDK Recipes
 
-> As of agent0-sdk v1.6.0, March 2026.
+> As of agent0-sdk v1.7.1, March 2026.
 
 8004skill executes TypeScript scripts via `npx tsx`. These recipes are for users who want to integrate directly with `agent0-py` (the Python SDK for ERC-8004). They are NOT executed by 8004skill.
 
